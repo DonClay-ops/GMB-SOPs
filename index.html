@@ -1,0 +1,1372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GBM Vendor Portal</title>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body style="margin:0;padding:0;">
+  <div id="root"></div>
+  <script type="text/babel">
+    const { useState, useEffect, useRef, useCallback } = React;
+
+
+
+// ─── ICONS (inline SVG map) ───────────────────────────────────────────────────
+const ICONS = {
+  "building-2": <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 9h1v1H9zM14 9h1v1h-1zM9 14h1v1H9zM14 14h1v1h-1z"/><path d="M9 21V12h6v9"/></svg>,
+  "bar-chart-2": <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>,
+  "layout": <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>,
+  "globe": <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>,
+  "git-branch": <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="6" y1="3" x2="6" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/></svg>,
+  "user-plus": <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>,
+  "upload-cloud": <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg>,
+  "database": <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>,
+  "copy": <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>,
+  "shield-alert": <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>,
+  "search": <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>,
+  "check-circle": <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>,
+  "server": <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/></svg>,
+  "refresh-cw": <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>,
+  "file-text": <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>,
+  "eye": <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>,
+  "credit-card": <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>,
+  "bell": <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>,
+  "refresh-ccw": <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="1 4 1 10 7 10"/><polyline points="23 20 23 14 17 14"/><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"/></svg>,
+  "alert-triangle": <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>,
+  "trending-up": <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>,
+  "trending-down": <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/><polyline points="17 18 23 18 23 12"/></svg>,
+  "clock": <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>,
+  "hourglass": <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 22h14"/><path d="M5 2h14"/><path d="M17 22v-4.172a2 2 0 0 0-.586-1.414L12 12l-4.414 4.414A2 2 0 0 0 7 17.828V22"/><path d="M7 2v4.172a2 2 0 0 0 .586 1.414L12 12l4.414-4.414A2 2 0 0 0 17 6.172V2"/></svg>,
+  "filter": <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>,
+  "download": <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>,
+  "plus": <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>,
+  "edit-2": <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>,
+  "save": <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>,
+  "x-circle": <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>,
+  "shield": <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>,
+  "shield-check": <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>,
+  "alert-circle": <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>,
+  "check": <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>,
+  "shopping-cart": <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>,
+  "check-square": <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>,
+  "user": <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>,
+  "mail": <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>,
+  "phone": <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 13 19.79 19.79 0 0 1 1.61 4.38 2 2 0 0 1 3.58 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>,
+  "file-question": <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M10.42 12.61a1.5 1.5 0 1 1 2.12 2.12C12 15.27 12 15.5 12 16"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>,
+  "help-circle": <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>,
+  "settings": <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>,
+  "send": <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>,
+  "paperclip": <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>,
+  "list": <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>,
+  "plus-circle": <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>,
+  "mouse-pointer": <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z"/><path d="M13 13l6 6"/></svg>,
+  "construction": <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M12 12h.01"/><path d="M6 12h.01"/><path d="M18 12h.01"/></svg>,
+  "calendar": <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>,
+  "file-check": <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><polyline points="9 15 11 17 15 13"/></svg>,
+  "activity": <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>,
+  "chevron-down": <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>,
+  "x": <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>,
+};
+
+const Ic = ({ name, size = 16, color, className }) => (
+  <span style={{ display:"inline-flex", alignItems:"center", width:size, height:size, flexShrink:0, color: color||"currentColor" }} className={className}>
+    {ICONS[name] || <span style={{width:size,height:size,background:"#ccc",borderRadius:"50%"}}/>}
+  </span>
+);
+
+// ─── DATA ────────────────────────────────────────────────────────────────────
+const VENDORS = [
+  { id:"V-0041", name:"Al Futtaim Trading Co.", cat:"IT Hardware", status:"Active", lastActivity:"22 Apr 2026", compliance:94, country:"UAE", contact:"Khalid Al Rashid", email:"k.rashid@alfuttaim.ae", phone:"+971 4 224 5500", iban:"AE070331234567890123456", vat:"100234567800003", licence:"CN-1092387", bank:"Emirates NBD", swift:"EBILAEAD", category:"IT Hardware & Infrastructure", dnp:"CLEAR", approvedBy:"Sara Al Hashimi", approvedDate:"12 Jan 2026",
+    kycDocs:[
+      {name:"Trade Licence", expiry:"2027-01-12", status:"Valid"},
+      {name:"VAT Certificate", expiry:"2026-06-30", status:"Expiring"},
+      {name:"Bank Letter", expiry:"2027-01-12", status:"Valid"},
+      {name:"Company Profile", expiry:"2027-01-12", status:"Valid"},
+    ],
+    contracts:[
+      {id:"GBM-CNT-0094", desc:"IT Hardware Supply Agreement", expiry:"2026-05-24", value:"AED 1.2M", status:"Active"},
+    ],
+    moodysScore:78, moodysRisk:"Low", moodysUpdated:"12 Jan 2026",
+  },
+  { id:"V-0052", name:"Sharaf DG LLC", cat:"Electronics", status:"Active", lastActivity:"20 Apr 2026", compliance:88, country:"UAE", contact:"Mohammed Al Zarooni", email:"m.zarooni@sharafdg.com", phone:"+971 4 317 7771", iban:"AE080232345678901234567", vat:"100345678900003", licence:"CN-2041293", bank:"ADCB", swift:"ADCBAEAA", category:"Consumer Electronics", dnp:"CLEAR", approvedBy:"Omar Khalfan", approvedDate:"03 Feb 2026",
+    kycDocs:[
+      {name:"Trade Licence", expiry:"2026-08-03", status:"Valid"},
+      {name:"VAT Certificate", expiry:"2026-09-01", status:"Valid"},
+      {name:"Bank Letter", expiry:"2026-08-03", status:"Valid"},
+      {name:"Company Profile", expiry:"2026-08-03", status:"Valid"},
+    ],
+    contracts:[
+      {id:"GBM-CNT-0101", desc:"Electronics Supply Framework", expiry:"2026-09-15", value:"AED 480K", status:"Active"},
+    ],
+    moodysScore:82, moodysRisk:"Low", moodysUpdated:"03 Feb 2026",
+  },
+  { id:"V-0063", name:"Axiom Telecom FZE", cat:"Telecoms", status:"Active", lastActivity:"18 Apr 2026", compliance:91, country:"UAE", contact:"Aisha Bint Sultan", email:"a.sultan@axiom.ae", phone:"+971 4 881 5566", iban:"AE090452345678901234568", vat:"100456789000003", licence:"FZ-3019482", bank:"Mashreq Bank", swift:"BOMLAEAD", category:"Telecommunications Equipment", dnp:"CLEAR", approvedBy:"Sara Al Hashimi", approvedDate:"15 Jan 2026",
+    kycDocs:[
+      {name:"Trade Licence", expiry:"2027-01-15", status:"Valid"},
+      {name:"VAT Certificate", expiry:"2026-05-20", status:"Expiring"},
+      {name:"Bank Letter", expiry:"2027-01-15", status:"Valid"},
+      {name:"Company Profile", expiry:"2027-01-15", status:"Valid"},
+    ],
+    contracts:[
+      {id:"GBM-CNT-0089", desc:"Telecom Equipment Supply", expiry:"2026-06-10", value:"AED 320K", status:"Active"},
+    ],
+    moodysScore:88, moodysRisk:"Low", moodysUpdated:"15 Jan 2026",
+  },
+  { id:"V-0074", name:"Saudi Networkers Services", cat:"IT Services", status:"Pending", lastActivity:"23 Apr 2026", compliance:0, country:"KSA", contact:"Faisal Al Qahtani", email:"f.qahtani@snsintl.com", phone:"+966 11 200 4400", iban:"SA0380000000608010167519", vat:"310099411300003", licence:"SA-9820341", bank:"Al Rajhi Bank", swift:"RJHISARI", category:"Managed IT Services", dnp:"PENDING", approvedBy:"—", approvedDate:"—",
+    kycDocs:[
+      {name:"Trade Licence", expiry:null, status:"Pending"},
+      {name:"VAT Certificate", expiry:null, status:"Pending"},
+      {name:"Bank Letter", expiry:null, status:"Pending"},
+      {name:"Company Profile", expiry:null, status:"Pending"},
+    ],
+    contracts:[],
+    moodysScore:null, moodysRisk:"Pending", moodysUpdated:"In Progress",
+  },
+  { id:"V-0085", name:"Hewlett Packard ME FZ-LLC", cat:"IT Hardware", status:"Active", lastActivity:"19 Apr 2026", compliance:98, country:"UAE", contact:"Christoph Müller", email:"c.muller@hp.com", phone:"+971 4 447 4500", iban:"AE130260001015426836001", vat:"100678900100003", licence:"FZ-1100923", bank:"HSBC UAE", swift:"BBMEAEAD", category:"IT Hardware & Printing", dnp:"CLEAR", approvedBy:"Omar Khalfan", approvedDate:"05 Nov 2025",
+    kycDocs:[
+      {name:"Trade Licence", expiry:"2027-11-05", status:"Valid"},
+      {name:"VAT Certificate", expiry:"2027-11-05", status:"Valid"},
+      {name:"Bank Letter", expiry:"2027-11-05", status:"Valid"},
+      {name:"Company Profile", expiry:"2027-11-05", status:"Valid"},
+    ],
+    contracts:[
+      {id:"GBM-CNT-0077", desc:"HP Hardware & Printing Supply", expiry:"2027-04-30", value:"AED 2.1M", status:"Active"},
+    ],
+    moodysScore:95, moodysRisk:"Very Low", moodysUpdated:"05 Nov 2025",
+  },
+  { id:"V-0096", name:"Redington Gulf FZE", cat:"Distribution", status:"Suspended", lastActivity:"01 Mar 2026", compliance:42, country:"UAE", contact:"Priya Nair", email:"p.nair@redington.com", phone:"+971 4 881 6100", iban:"AE200260001023456836002", vat:"100789001200003", licence:"FZ-7823410", bank:"Standard Chartered", swift:"SCBLAEADXXX", category:"IT Distribution", dnp:"FLAGGED", approvedBy:"Suspended — Compliance Review", approvedDate:"01 Mar 2026",
+    kycDocs:[
+      {name:"Trade Licence", expiry:"2025-12-31", status:"Expired"},
+      {name:"VAT Certificate", expiry:"2025-12-31", status:"Expired"},
+      {name:"Bank Letter", expiry:"2026-03-01", status:"Expired"},
+      {name:"Company Profile", expiry:"2026-03-01", status:"Expired"},
+    ],
+    contracts:[
+      {id:"GBM-CNT-0065", desc:"Distribution Framework Agreement", expiry:"2026-04-01", value:"AED 750K", status:"Suspended"},
+    ],
+    moodysScore:34, moodysRisk:"High", moodysUpdated:"01 Mar 2026",
+  },
+];
+
+const PURCHASE_ORDERS = [
+  { po:"PO-2026-0441", vendor:"Al Futtaim Trading Co.", desc:"HP ProBook Laptops x50", amount:"AED 385,000", status:"Open", delivery:"30 Apr 2026" },
+  { po:"PO-2026-0438", vendor:"Axiom Telecom FZE", desc:"Cisco Catalyst Switches x10", amount:"AED 112,500", status:"Partially Delivered", delivery:"25 Apr 2026" },
+  { po:"PO-2026-0421", vendor:"Sharaf DG LLC", desc:"iPad Pro for Field Teams x20", amount:"AED 68,000", status:"Goods Received", delivery:"15 Apr 2026" },
+  { po:"PO-2026-0410", vendor:"HP ME FZ-LLC", desc:"LaserJet Printers x15", amount:"AED 44,250", status:"Closed", delivery:"10 Apr 2026" },
+  { po:"PO-2026-0455", vendor:"Al Futtaim Trading Co.", desc:"Network Infrastructure Kit", amount:"AED 210,000", status:"Open", delivery:"05 May 2026" },
+  { po:"PO-2026-0460", vendor:"Axiom Telecom FZE", desc:"IP Phones x200", amount:"AED 88,000", status:"Open", delivery:"10 May 2026" },
+];
+
+const INVOICES_DATA = [
+  { inv:"INV-AF-2026-0094", vendor:"Al Futtaim Trading Co.", po:"PO-2026-0421", amount:"AED 68,000", submitted:"18 Apr 2026", submittedDaysAgo:6, status:"Under Review", currentStep:1 },
+  { inv:"INV-AX-2026-0032", vendor:"Axiom Telecom FZE", po:"PO-2026-0401", amount:"AED 55,750", submitted:"10 Apr 2026", submittedDaysAgo:14, status:"Approved", currentStep:2 },
+  { inv:"INV-HP-2026-0017", vendor:"HP ME FZ-LLC", po:"PO-2026-0410", amount:"AED 44,250", submitted:"12 Apr 2026", submittedDaysAgo:12, status:"Paid", currentStep:3 },
+  { inv:"INV-AF-2026-0091", vendor:"Al Futtaim Trading Co.", po:"PO-2026-0388", amount:"AED 125,000", submitted:"05 Apr 2026", submittedDaysAgo:19, status:"Under Review", currentStep:1 },
+  { inv:"INV-SG-2026-0009", vendor:"Sharaf DG LLC", po:"PO-2026-0376", amount:"AED 33,500", submitted:"01 Apr 2026", submittedDaysAgo:23, status:"Under Review", currentStep:1 },
+];
+
+const CONTRACTS = [
+  { id:"GBM-CNT-0094", vendor:"Al Futtaim Trading Co.", desc:"IT Hardware Supply Agreement", expiry:"2026-05-24", value:"AED 1.2M", status:"Active", daysLeft:30 },
+  { id:"GBM-CNT-0089", vendor:"Axiom Telecom FZE", desc:"Telecom Equipment Supply", expiry:"2026-06-10", value:"AED 320K", status:"Active", daysLeft:47 },
+  { id:"GBM-CNT-0101", vendor:"Sharaf DG LLC", desc:"Electronics Supply Framework", expiry:"2026-09-15", value:"AED 480K", status:"Active", daysLeft:144 },
+  { id:"GBM-CNT-0077", vendor:"Hewlett Packard ME FZ-LLC", desc:"HP Hardware & Printing Supply", expiry:"2027-04-30", value:"AED 2.1M", status:"Active", daysLeft:371 },
+  { id:"GBM-CNT-0065", vendor:"Redington Gulf FZE", desc:"Distribution Framework", expiry:"2026-04-01", value:"AED 750K", status:"Suspended", daysLeft:-23 },
+];
+
+// ─── COLORS ──────────────────────────────────────────────────────────────────
+const C = { sap:"#0070F3", pp:"#742774", gbm:"#217346", vendor:"#E65100", accent:"#0078d4", success:"#107c10", warning:"#d83b01", danger:"#c50f1f", border:"#e1dfdd", neutral60:"#a19f9d", neutral100:"#323130" };
+
+// ─── SHARED COMPONENTS ───────────────────────────────────────────────────────
+const Badge = ({ type, children }) => {
+  const styles = {
+    active:   { background:"#dff6dd", color:"#107c10" },
+    pending:  { background:"#fff4ce", color:"#835b00" },
+    suspended:{ background:"#fde7e9", color:"#c50f1f" },
+    clear:    { background:"#dff6dd", color:"#107c10" },
+    flagged:  { background:"#fde7e9", color:"#c50f1f" },
+    review:   { background:"#cce3f5", color:"#0078d4" },
+    expired:  { background:"#fde7e9", color:"#c50f1f" },
+    expiring: { background:"#fff4ce", color:"#835b00" },
+    valid:    { background:"#dff6dd", color:"#107c10" },
+  };
+  return (
+    <span style={{ display:"inline-flex", alignItems:"center", gap:4, padding:"2px 10px", borderRadius:20, fontSize:11, fontWeight:600, ...(styles[type?.toLowerCase()] || styles.pending) }}>
+      {children}
+    </span>
+  );
+};
+
+// ─── WORKFLOW DIAGRAM ─────────────────────────────────────────────────────────
+const SOURCE_COLORS = { sap:C.sap, pp:C.pp, gbm:C.gbm, vendor:C.vendor };
+const SOURCE_LABELS = { sap:"SAP (Source of Truth)", pp:"Power Platform", gbm:"GBM Internal Users", vendor:"Vendor Inputs" };
+
+const WORKFLOW_NODES = [
+  { id:"vn1", lane:"vendor", label:"Vendor Self-Register", icon:"user-plus", source:"vendor", sop:"Step 1 — §2", party:"Vendor / Supplier", desc:"The vendor visits the Power Pages portal and completes the self-registration form with company details, trade licence, banking information, and product categories." },
+  { id:"vn2", lane:"vendor", label:"Submit Documents", icon:"upload-cloud", source:"vendor", sop:"Step 2 — §2", party:"Vendor / Supplier", desc:"Vendor uploads required compliance documents: Trade Licence, VAT Certificate, Bank Letter, and Company Profile. Data is stored in Dataverse (not SAP)." },
+  { id:"pp1", lane:"pp", label:"Dataverse Record Created", icon:"database", source:"pp", sop:"Step 2 — §2", party:"Power Platform (Automated)", desc:"Upon vendor submission, Power Platform stores all vendor information and supporting documents in Dataverse. No data is written to SAP at this stage." },
+  { id:"pp2", lane:"pp", label:"Duplicate Check vs SAP", icon:"copy", source:"pp", sop:"Step 3 — §2", party:"Power Platform (Automated)", desc:"Power Platform performs a read-only cross-check of vendor details (name, VAT, trade licence, IBAN) against the SAP vendor master to identify potential duplicates." },
+  { id:"pp3", lane:"pp", label:"Moodys DNP API Call", icon:"shield-alert", source:"pp", sop:"Step 4 — §3", party:"Power Platform + Moodys API", desc:"Automated DNP compliance check is triggered via the Moodys API using vendor name, country, and registration number. Result is returned and stored in Dataverse." },
+  { id:"gbm1", lane:"gbm", label:"Review DNP Result", icon:"search", source:"gbm", sop:"Step 4 — §3", party:"GBM Compliance Team", desc:"Compliance team reviews the Moodys API DNP result in the Model-Driven App. If FLAGGED or DENIED, onboarding is halted and vendor is notified. If CLEAR, workflow proceeds." },
+  { id:"gbm2", lane:"gbm", label:"Internal Review & Approval", icon:"check-circle", source:"gbm", sop:"Step 5 — §2", party:"GBM Procurement / Compliance", desc:"Full vendor submission, DNP result, and documents are reviewed in the Model-Driven App. Approval or rejection is recorded with documented reason. Vendor is notified via portal." },
+  { id:"gbm3", lane:"gbm", label:"Create Vendor in SAP", icon:"building-2", source:"gbm", sop:"Step 6 — §2", party:"GBM Procurement Team", desc:"Upon approval, GBM team member manually creates the vendor record in SAP. The assigned SAP Vendor ID is linked back to the Dataverse record. No automated write from Power Platform." },
+  { id:"sap1", lane:"sap", label:"SAP Vendor Master Updated", icon:"server", source:"sap", sop:"§1.2, §6", party:"GBM SAP Team (Manual)", desc:"The vendor record is created directly in SAP by the GBM SAP team. SAP remains the sole source of truth. Power Platform reads this data in the next sync cycle." },
+  { id:"sap2", lane:"sap", label:"PO Data Synced to Portal", icon:"refresh-cw", source:"sap", sop:"§1.2, §4.2", party:"SAP → Power Platform (Read-Only)", desc:"SAP Purchase Order data is synced into Dataverse on a scheduled basis. Vendors can view their POs, status, and delivery information via the Power Pages portal." },
+  { id:"vn3", lane:"vendor", label:"Submit Invoice via Portal", icon:"file-text", source:"vendor", sop:"§4.3", party:"Vendor / Supplier", desc:"Vendor submits invoice electronically via Power Pages, referencing an existing PO. Supporting documents (delivery notes, timesheets) are uploaded and stored in Dataverse." },
+  { id:"gbm4", lane:"gbm", label:"Finance Reviews Invoice", icon:"eye", source:"gbm", sop:"§4.3, §5", party:"GBM Finance Team", desc:"GBM Finance team reviews vendor-submitted invoices in the Model-Driven App. Invoice status is updated in Dataverse. Payment processing is actioned directly in SAP by Finance." },
+  { id:"sap3", lane:"sap", label:"Payment Processed in SAP", icon:"credit-card", source:"sap", sop:"§4.3", party:"GBM Finance (SAP Direct)", desc:"Invoice approval and payment are processed by GBM Finance directly in SAP. Payment status is synced back to Power Platform and surfaced to the vendor in the portal." },
+  { id:"pp4", lane:"pp", label:"Contract Expiry Reminders", icon:"bell", source:"pp", sop:"§4.4", party:"Power Platform (Automated)", desc:"Power Platform sends automated email reminders to vendors and GBM teams at 90, 60, and 30 days before contract expiry. Contract data is read from SAP." },
+  { id:"gbm5", lane:"gbm", label:"Periodic Re-Screening", icon:"refresh-ccw", source:"gbm", sop:"§3.2, §6.3", party:"GBM Compliance / Data Steward", desc:"Vendors are subject to periodic DNP re-screening and quarterly inactive vendor review. GBM Data Steward oversees vendor master data quality in the Model-Driven App." },
+];
+
+// Lanes definition: each slot is a nodeId or null (placeholder)
+const LANES = [
+  { id:"vendor", label:"Vendor / Supplier", color:C.vendor },
+  { id:"pp",     label:"Power Platform",    color:C.pp },
+  { id:"gbm",    label:"GBM Internal",      color:C.gbm },
+  { id:"sap",    label:"SAP ERP",           color:C.sap },
+];
+
+// 8 columns — each lane fills its nodes in order across columns
+// col:  0      1      2      3      4      5      6      7
+const LANE_NODES = {
+  vendor: ["vn1",  "vn2",  null,   null,   null,   "vn3",  null,   null  ],
+  pp:     [null,   "pp1",  "pp2",  "pp3",  null,   null,   "pp4",  null  ],
+  gbm:    [null,   null,   null,   "gbm1", "gbm2", "gbm3", "gbm5", "gbm4"],
+  sap:    [null,   null,   null,   null,   "sap1", "sap2", null,   "sap3"],
+};
+
+const nodeById = id => WORKFLOW_NODES.find(n => n.id === id);
+
+function WorkflowDiagram() {
+  const [selected, setSelected] = useState(null);
+
+  const renderNode = (id, laneId) => {
+    if (!id) return <div style={{ minWidth:150, height:90 }} />;
+    const node = nodeById(id);
+    if (!node) return <div style={{ minWidth:150, height:90 }} />;
+    const color = SOURCE_COLORS[node.source];
+    const isSel = selected?.id === id;
+    return (
+      <div
+        onClick={() => setSelected(node)}
+        style={{
+          borderRadius:8, border:`2px solid ${isSel ? color : color+"55"}`,
+          padding:"12px 14px", minWidth:140, maxWidth:155, cursor:"pointer",
+          transition:"all 0.15s", display:"flex", flexDirection:"column",
+          alignItems:"center", textAlign:"center", gap:6, background:"white",
+          boxShadow: isSel ? `0 0 0 3px ${color}44, 0 6px 16px rgba(0,0,0,0.15)` : "0 2px 6px rgba(0,0,0,0.1)",
+          transform: isSel ? "translateY(-2px)" : "none", flexShrink:0,
+        }}
+      >
+        <div style={{ width:36, height:36, borderRadius:"50%", background:color+"18", display:"flex", alignItems:"center", justifyContent:"center" }}>
+          <Ic name={node.icon} size={18} color={color} />
+        </div>
+        <div style={{ fontSize:11, fontWeight:600, color:C.neutral100, lineHeight:1.3 }}>{node.label}</div>
+        <div style={{ fontSize:10, fontWeight:500, color }}>{node.source.toUpperCase()}</div>
+      </div>
+    );
+  };
+
+  const ArrowSvg = ({ laneId, colIdx }) => (
+    <svg width="40" height="40" viewBox="0 0 40 40" style={{ flexShrink:0 }}>
+      <defs>
+        <marker id={`ah-${laneId}-${colIdx}`} markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto">
+          <path d="M0,0 L0,6 L6,3 z" fill="#aaa" />
+        </marker>
+      </defs>
+      <line x1="2" y1="20" x2="32" y2="20" stroke="#bbb" strokeWidth="1.5" markerEnd={`url(#ah-${laneId}-${colIdx})`} />
+    </svg>
+  );
+
+  return (
+    <div style={{ display:"flex", height:"calc(100vh - 48px)", overflow:"hidden" }}>
+      {/* Main canvas */}
+      <div style={{ flex:1, overflowX:"auto", overflowY:"auto", background:"#f8f8fc" }}>
+        {/* Legend */}
+        <div style={{ display:"flex", gap:16, flexWrap:"wrap", padding:"10px 24px", background:"white", borderBottom:`1px solid ${C.border}`, alignItems:"center" }}>
+          <span style={{ fontSize:12, fontWeight:600, color:C.neutral60 }}>LEGEND:</span>
+          {Object.entries(SOURCE_COLORS).map(([k,v]) => (
+            <div key={k} style={{ display:"flex", alignItems:"center", gap:6, fontSize:12 }}>
+              <div style={{ width:12, height:12, borderRadius:"50%", background:v }} />
+              <span>{SOURCE_LABELS[k]}</span>
+            </div>
+          ))}
+        </div>
+        {/* Banner */}
+        <div style={{ background:"white", borderBottom:`1px solid ${C.border}`, padding:"10px 24px", display:"flex", alignItems:"center", gap:12 }}>
+          <span style={{ fontSize:13, fontWeight:600 }}>🗺 Vendor Management Process Flow</span>
+          <span style={{ fontSize:12, color:C.neutral60 }}>GBM SOP v1.1 — Click any node for details</span>
+        </div>
+        {/* Swimlanes */}
+        <div style={{ minWidth:1350, padding:"24px 16px" }}>
+          {LANES.map(lane => (
+            <div key={lane.id} style={{ display:"flex", alignItems:"flex-start", minHeight:140, borderBottom:"1px dashed #ddd", marginBottom:4 }}>
+              {/* Lane label */}
+              <div style={{ width:110, minWidth:110, background:lane.color, color:"white", display:"flex", alignItems:"center", justifyContent:"center", textAlign:"center", padding:"8px", fontSize:11, fontWeight:700, textTransform:"uppercase", letterSpacing:"0.5px", alignSelf:"stretch" }}>
+                {lane.label}
+              </div>
+              {/* Nodes row */}
+              <div style={{ flex:1, display:"flex", alignItems:"center", gap:0, padding:"20px 8px", flexWrap:"nowrap" }}>
+                {LANE_NODES[lane.id].map((nodeId, i) => {
+                  const nextId = LANE_NODES[lane.id][i + 1];
+                  const showArrow = i < LANE_NODES[lane.id].length - 1 && nodeId && nextId;
+                  const showSpacer = i < LANE_NODES[lane.id].length - 1 && (!nodeId || !nextId);
+                  return (
+                    <div key={i} style={{ display:"flex", alignItems:"center" }}>
+                      {renderNode(nodeId, lane.id)}
+                      {showArrow && <ArrowSvg laneId={lane.id} colIdx={i} />}
+                      {showSpacer && <div style={{ minWidth:40 }} />}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+          {/* Architecture note */}
+          <div style={{ margin:"20px 0 0", background:"#fff3cd", border:"1px solid #ffc107", borderRadius:6, padding:"12px 16px", fontSize:12, display:"flex", gap:10, alignItems:"flex-start" }}>
+            <Ic name="alert-triangle" size={16} color="#835b00" />
+            <span style={{ color:"#5f4a00" }}><strong>Architecture Constraint:</strong> Power Platform READS from SAP only. No data is written from Power Platform back to SAP. All master record creation, PO management, invoice approval, and payment processing is performed directly in SAP by GBM internal teams.</span>
+          </div>
+        </div>
+      </div>
+      {/* Side panel */}
+      <div style={{ width:320, background:"white", borderLeft:`1px solid ${C.border}`, padding:20, overflowY:"auto", flexShrink:0 }}>
+        {selected ? (
+          <>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:12 }}>
+              <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                <div style={{ width:32, height:32, borderRadius:"50%", background:SOURCE_COLORS[selected.source]+"18", display:"flex", alignItems:"center", justifyContent:"center" }}>
+                  <Ic name={selected.icon} size={16} color={SOURCE_COLORS[selected.source]} />
+                </div>
+                <h3 style={{ fontSize:14, fontWeight:600 }}>{selected.label}</h3>
+              </div>
+              <span style={{ cursor:"pointer", color:C.neutral60, fontSize:16 }} onClick={() => setSelected(null)}>✕</span>
+            </div>
+            <span style={{ display:"inline-flex", alignItems:"center", gap:4, padding:"3px 10px", borderRadius:20, fontSize:11, fontWeight:600, color:"white", background:SOURCE_COLORS[selected.source], marginBottom:14 }}>{SOURCE_LABELS[selected.source]}</span>
+            {[["RESPONSIBLE PARTY", selected.party], ["SOP REFERENCE", selected.sop], ["INPUT SOURCE", SOURCE_LABELS[selected.source]]].map(([label, val]) => (
+              <div key={label} style={{ marginBottom:10 }}>
+                <div style={{ fontSize:11, textTransform:"uppercase", color:C.neutral60, fontWeight:600, marginBottom:3 }}>{label}</div>
+                <div style={{ fontSize:13 }}>{val}</div>
+              </div>
+            ))}
+            <div style={{ fontSize:11, textTransform:"uppercase", color:C.neutral60, fontWeight:600, marginBottom:4 }}>DESCRIPTION</div>
+            <div style={{ fontSize:13, color:"#3b3a39", lineHeight:1.6 }}>{selected.desc}</div>
+          </>
+        ) : (
+          <>
+            <h3 style={{ fontSize:15, fontWeight:600, marginBottom:6 }}>Process Details</h3>
+            <div style={{ color:C.neutral60, fontSize:13, marginTop:24, textAlign:"center" }}>
+              <Ic name="mouse-pointer" size={32} color="#bbb" />
+              <p style={{ marginTop:12 }}>Click any process node to view details here.</p>
+            </div>
+            <div style={{ marginTop:24 }}>
+              <div style={{ fontSize:11, textTransform:"uppercase", color:C.neutral60, fontWeight:600, marginBottom:4 }}>ABOUT THIS DIAGRAM</div>
+              <div style={{ fontSize:13, color:"#3b3a39", lineHeight:1.5 }}>This workflow maps all SOPs defined in the GBM Vendor Management SOP v1.1. Swimlanes represent the four primary stakeholders: Vendors, Power Platform automation, GBM Internal Teams, and SAP ERP.</div>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── DASHBOARD ────────────────────────────────────────────────────────────────
+function Dashboard() {
+  const pendingInvoices = INVOICES_DATA.filter(i => i.status === "Under Review");
+  const expiring30 = CONTRACTS.filter(c => c.daysLeft > 0 && c.daysLeft <= 30);
+  const expiring60 = CONTRACTS.filter(c => c.daysLeft > 30 && c.daysLeft <= 60);
+  const kycExpiring = VENDORS.flatMap(v => v.kycDocs.filter(d => d.status === "Expiring" || d.status === "Expired").map(d => ({ vendor:v.name, vendorId:v.id, ...d })));
+  const moodysStats = { clear: VENDORS.filter(v=>v.dnp==="CLEAR").length, flagged: VENDORS.filter(v=>v.dnp==="FLAGGED").length, pending: VENDORS.filter(v=>v.dnp==="PENDING").length };
+
+  const activities = [
+    { icon:"user-plus", color:C.gbm, text:"Saudi Networkers Services — New registration submitted", time:"23 Apr 2026 · 09:14 GST" },
+    { icon:"check-circle", color:C.accent, text:"INV-AF-2026-0094 moved to Under Review by Finance", time:"22 Apr 2026 · 16:45 GST" },
+    { icon:"alert-triangle", color:C.warning, text:"Redington Gulf FZE — DNP flag escalated to Compliance", time:"22 Apr 2026 · 11:30 GST" },
+    { icon:"file-text", color:C.pp, text:"INV-AX-2026-0032 approved — AED 55,750", time:"21 Apr 2026 · 14:22 GST" },
+    { icon:"bell", color:"#835b00", text:"Al Futtaim — Contract GBM-CNT-0094 expiring in 30 days", time:"20 Apr 2026 · 08:00 GST" },
+  ];
+
+  const KPICard = ({ label, value, sub, sub2, colorClass, icon }) => (
+    <div style={{ background:"white", border:`1px solid ${C.border}`, borderRadius:4, padding:"16px 20px", position:"relative", overflow:"hidden" }}>
+      <div style={{ position:"absolute", top:0, left:0, right:0, height:3, background:colorClass }} />
+      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:6 }}>
+        <div style={{ fontSize:12, color:C.neutral60, fontWeight:500 }}>{label}</div>
+        {icon && <Ic name={icon} size={18} color={colorClass} />}
+      </div>
+      <div style={{ fontSize:28, fontWeight:700, color:C.neutral100 }}>{value}</div>
+      {sub && <div style={{ fontSize:11, color:C.neutral60, marginTop:4 }}>{sub}</div>}
+      {sub2 && <div style={{ fontSize:11, color:C.neutral60 }}>{sub2}</div>}
+    </div>
+  );
+
+  const invSlaSeverity = (days) => days > 14 ? { color:"#c50f1f", label:"Overdue" } : days > 7 ? { color:"#d83b01", label:"At Risk" } : { color:"#107c10", label:"On Time" };
+
+  return (
+    <div style={{ height:"calc(100vh - 48px)", overflowY:"auto", background:"#f3f2f1" }}>
+      {/* Header */}
+      <div style={{ background:"white", borderBottom:`1px solid ${C.border}`, padding:"16px 24px", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+        <div>
+          <div style={{ fontSize:18, fontWeight:600 }}>Procurement Dashboard</div>
+          <div style={{ fontSize:12, color:C.neutral60, marginTop:2 }}>Live overview — 24 Apr 2026 · All amounts in AED</div>
+        </div>
+        <div style={{ display:"flex", gap:8 }}>
+          <button style={{ display:"inline-flex", alignItems:"center", gap:6, padding:"6px 14px", borderRadius:2, fontSize:13, fontWeight:500, cursor:"pointer", border:`1px solid ${C.border}`, background:"white" }}><Ic name="filter" size={13}/>Filter</button>
+          <button style={{ display:"inline-flex", alignItems:"center", gap:6, padding:"6px 14px", borderRadius:2, fontSize:13, fontWeight:500, cursor:"pointer", border:"none", background:C.accent, color:"white" }}><Ic name="download" size={13}/>Export</button>
+        </div>
+      </div>
+
+      <div style={{ padding:"20px 24px", display:"flex", flexDirection:"column", gap:16 }}>
+        {/* Row 1: Core KPIs */}
+        <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:16 }}>
+          <KPICard label="Total Active Vendors" value="3,847" sub="+42 this quarter" sub2="From 5,000 SAP records (post-dedup)" colorClass={C.accent} icon="building-2" />
+          <KPICard label="Pending Purchase Orders" value="128" sub="-9 vs last week" sub2="Value: AED 9.4M outstanding" colorClass={C.success} icon="shopping-cart" />
+          <KPICard label="Onboarding — Pending Review" value="7" sub="2 DNP flagged" sub2="Avg. onboarding: 4.2 days" colorClass={C.pp} icon="user-plus" />
+          <KPICard label="SLA Compliance" value="87%" sub="13% at risk" sub2="34 invoices processed this month" colorClass="#e65100" icon="activity" />
+        </div>
+
+        {/* Row 2: Invoices pending + Moodys KPI */}
+        <div style={{ display:"grid", gridTemplateColumns:"2fr 1fr", gap:16 }}>
+          {/* Invoices Awaiting Approval */}
+          <div style={{ background:"white", border:`1px solid ${C.border}`, borderRadius:4, padding:16 }}>
+            <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:14 }}>
+              <div style={{ fontSize:13, fontWeight:600 }}>
+                <span style={{ display:"inline-flex", alignItems:"center", gap:6 }}><Ic name="file-text" size={15} color={C.warning} /> Invoices Awaiting Approval ({pendingInvoices.length})</span>
+              </div>
+              <span style={{ fontSize:11, color:"#d83b01", fontWeight:600 }}>SLA: 10 business days</span>
+            </div>
+            <table style={{ width:"100%", borderCollapse:"collapse", fontSize:12 }}>
+              <thead>
+                <tr>{["Invoice #","Vendor","PO Ref","Amount","Submitted","Days Waiting","SLA Status"].map(h=>(
+                  <th key={h} style={{ textAlign:"left", padding:"6px 8px", color:C.neutral60, fontWeight:600, borderBottom:`1px solid ${C.border}` }}>{h}</th>
+                ))}</tr>
+              </thead>
+              <tbody>
+                {pendingInvoices.map((inv,i) => {
+                  const sla = invSlaSeverity(inv.submittedDaysAgo);
+                  return (
+                    <tr key={i} style={{ borderBottom:`1px solid #f3f2f1` }}>
+                      <td style={{ padding:"8px", fontFamily:"monospace", color:C.accent, fontSize:11 }}>{inv.inv}</td>
+                      <td style={{ padding:"8px" }}>{inv.vendor}</td>
+                      <td style={{ padding:"8px", fontFamily:"monospace", fontSize:11 }}>{inv.po}</td>
+                      <td style={{ padding:"8px", fontWeight:600 }}>{inv.amount}</td>
+                      <td style={{ padding:"8px", color:C.neutral60 }}>{inv.submitted}</td>
+                      <td style={{ padding:"8px", fontWeight:700, color:sla.color }}>{inv.submittedDaysAgo}d</td>
+                      <td style={{ padding:"8px" }}><Badge type={sla.label === "Overdue" ? "expired" : sla.label === "At Risk" ? "expiring" : "valid"}>{sla.label}</Badge></td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Moodys KPI */}
+          <div style={{ background:"white", border:`1px solid ${C.border}`, borderRadius:4, padding:16 }}>
+            <div style={{ fontSize:13, fontWeight:600, marginBottom:14 }}>
+              <span style={{ display:"inline-flex", alignItems:"center", gap:6 }}><Ic name="shield" size={15} color={C.pp} /> Moodys DNP Screening Status</span>
+            </div>
+            <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
+              {[
+                { label:"CLEAR", value:moodysStats.clear, color:"#107c10", bg:"#dff6dd", icon:"shield-check" },
+                { label:"FLAGGED", value:moodysStats.flagged, color:"#c50f1f", bg:"#fde7e9", icon:"alert-circle" },
+                { label:"PENDING", value:moodysStats.pending, color:"#835b00", bg:"#fff4ce", icon:"clock" },
+              ].map(row => (
+                <div key={row.label} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"10px 14px", background:row.bg, borderRadius:6 }}>
+                  <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                    <Ic name={row.icon} size={16} color={row.color} />
+                    <span style={{ fontSize:12, fontWeight:600, color:row.color }}>{row.label}</span>
+                  </div>
+                  <span style={{ fontSize:24, fontWeight:700, color:row.color }}>{row.value}</span>
+                </div>
+              ))}
+              <div style={{ fontSize:11, color:C.neutral60, textAlign:"center", marginTop:4 }}>
+                Total vendors screened: {VENDORS.length} · Screening via Moodys API
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Row 3: Contract expiry + KYC expiry */}
+        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:16 }}>
+          {/* Contract expiry */}
+          <div style={{ background:"white", border:`1px solid ${C.border}`, borderRadius:4, padding:16 }}>
+            <div style={{ fontSize:13, fontWeight:600, marginBottom:14 }}>
+              <span style={{ display:"inline-flex", alignItems:"center", gap:6 }}><Ic name="calendar" size={15} color="#e65100" /> Contract Expiry Tracker</span>
+            </div>
+            {/* Summary badges */}
+            <div style={{ display:"flex", gap:10, marginBottom:14 }}>
+              <div style={{ background:"#fde7e9", borderRadius:6, padding:"8px 14px", textAlign:"center", flex:1 }}>
+                <div style={{ fontSize:20, fontWeight:700, color:"#c50f1f" }}>{expiring30.length}</div>
+                <div style={{ fontSize:11, color:"#c50f1f", fontWeight:600 }}>Expiring in 30 days</div>
+              </div>
+              <div style={{ background:"#fff4ce", borderRadius:6, padding:"8px 14px", textAlign:"center", flex:1 }}>
+                <div style={{ fontSize:20, fontWeight:700, color:"#835b00" }}>{expiring60.length}</div>
+                <div style={{ fontSize:11, color:"#835b00", fontWeight:600 }}>Expiring in 60 days</div>
+              </div>
+              <div style={{ background:"#dff6dd", borderRadius:6, padding:"8px 14px", textAlign:"center", flex:1 }}>
+                <div style={{ fontSize:20, fontWeight:700, color:"#107c10" }}>{CONTRACTS.filter(c=>c.daysLeft>60).length}</div>
+                <div style={{ fontSize:11, color:"#107c10", fontWeight:600 }}>Healthy (&gt;60 days)</div>
+              </div>
+            </div>
+            <table style={{ width:"100%", borderCollapse:"collapse", fontSize:12 }}>
+              <thead>
+                <tr>{["Contract ID","Vendor","Expiry","Days Left","Status"].map(h=>(
+                  <th key={h} style={{ textAlign:"left", padding:"6px 8px", color:C.neutral60, fontWeight:600, borderBottom:`1px solid ${C.border}` }}>{h}</th>
+                ))}</tr>
+              </thead>
+              <tbody>
+                {[...CONTRACTS].sort((a,b)=>a.daysLeft-b.daysLeft).map((c,i) => (
+                  <tr key={i} style={{ borderBottom:`1px solid #f3f2f1` }}>
+                    <td style={{ padding:"7px 8px", fontFamily:"monospace", color:C.accent, fontSize:11 }}>{c.id}</td>
+                    <td style={{ padding:"7px 8px", fontSize:12 }}>{c.vendor.split(" ").slice(0,2).join(" ")}</td>
+                    <td style={{ padding:"7px 8px", color:C.neutral60 }}>{c.expiry}</td>
+                    <td style={{ padding:"7px 8px", fontWeight:700, color: c.daysLeft < 0 ? "#c50f1f" : c.daysLeft <= 30 ? "#c50f1f" : c.daysLeft <= 60 ? "#835b00" : "#107c10" }}>
+                      {c.daysLeft < 0 ? `${Math.abs(c.daysLeft)}d overdue` : `${c.daysLeft}d`}
+                    </td>
+                    <td style={{ padding:"7px 8px" }}><Badge type={c.daysLeft < 0 ? "expired" : c.daysLeft <= 30 ? "expiring" : "valid"}>{c.daysLeft < 0 ? "Expired" : c.daysLeft <= 30 ? "Critical" : c.daysLeft <= 60 ? "Expiring" : "Active"}</Badge></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* KYC Document expiry */}
+          <div style={{ background:"white", border:`1px solid ${C.border}`, borderRadius:4, padding:16 }}>
+            <div style={{ fontSize:13, fontWeight:600, marginBottom:14 }}>
+              <span style={{ display:"inline-flex", alignItems:"center", gap:6 }}><Ic name="file-check" size={15} color={C.pp} /> KYC Document Expiry Alerts</span>
+            </div>
+            <div style={{ display:"flex", gap:10, marginBottom:14 }}>
+              <div style={{ background:"#fde7e9", borderRadius:6, padding:"8px 14px", textAlign:"center", flex:1 }}>
+                <div style={{ fontSize:20, fontWeight:700, color:"#c50f1f" }}>{kycExpiring.filter(k=>k.status==="Expired").length}</div>
+                <div style={{ fontSize:11, color:"#c50f1f", fontWeight:600 }}>Expired</div>
+              </div>
+              <div style={{ background:"#fff4ce", borderRadius:6, padding:"8px 14px", textAlign:"center", flex:1 }}>
+                <div style={{ fontSize:20, fontWeight:700, color:"#835b00" }}>{kycExpiring.filter(k=>k.status==="Expiring").length}</div>
+                <div style={{ fontSize:11, color:"#835b00", fontWeight:600 }}>Expiring Soon</div>
+              </div>
+            </div>
+            {kycExpiring.length > 0 ? (
+              <table style={{ width:"100%", borderCollapse:"collapse", fontSize:12 }}>
+                <thead>
+                  <tr>{["Vendor","Document","Expiry","Status"].map(h=>(
+                    <th key={h} style={{ textAlign:"left", padding:"6px 8px", color:C.neutral60, fontWeight:600, borderBottom:`1px solid ${C.border}` }}>{h}</th>
+                  ))}</tr>
+                </thead>
+                <tbody>
+                  {kycExpiring.map((k,i)=>(
+                    <tr key={i} style={{ borderBottom:`1px solid #f3f2f1` }}>
+                      <td style={{ padding:"7px 8px", fontSize:11, fontWeight:500 }}>{k.vendor.split(" ").slice(0,2).join(" ")}</td>
+                      <td style={{ padding:"7px 8px", fontSize:11 }}>{k.name}</td>
+                      <td style={{ padding:"7px 8px", color:C.neutral60, fontSize:11 }}>{k.expiry || "—"}</td>
+                      <td style={{ padding:"7px 8px" }}><Badge type={k.status.toLowerCase()}>{k.status}</Badge></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            ) : (
+              <div style={{ textAlign:"center", color:C.neutral60, padding:"20px 0", fontSize:13 }}>All KYC documents are valid ✓</div>
+            )}
+          </div>
+        </div>
+
+        {/* Row 4: Recent activity */}
+        <div style={{ background:"white", border:`1px solid ${C.border}`, borderRadius:4, padding:16 }}>
+          <div style={{ fontSize:13, fontWeight:600, marginBottom:12 }}>Recent Activity</div>
+          <div style={{ display:"grid", gridTemplateColumns:"repeat(5,1fr)", gap:8 }}>
+            {activities.map((a,i)=>(
+              <div key={i} style={{ display:"flex", gap:8, padding:"10px", background:"#faf9f8", borderRadius:6, alignItems:"flex-start", border:`1px solid ${C.border}` }}>
+                <div style={{ width:28, height:28, borderRadius:"50%", background:a.color+"18", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+                  <Ic name={a.icon} size={14} color={a.color} />
+                </div>
+                <div>
+                  <div style={{ fontSize:11, lineHeight:1.4 }}>{a.text}</div>
+                  <div style={{ fontSize:10, color:C.neutral60, marginTop:2 }}>{a.time}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── MODEL-DRIVEN APP (INTERNAL) ─────────────────────────────────────────────
+function ModelDrivenApp() {
+  const [activeNav, setActiveNav] = useState("vendors");
+  const [selectedVendor, setSelectedVendor] = useState(null);
+  const [detailTab, setDetailTab] = useState("profile");
+  const [searchQ, setSearchQ] = useState("");
+  const [validationModal, setValidationModal] = useState(null); // {type, vendor, item}
+  const [validationState, setValidationState] = useState({}); // keyed by "vendorId-docName"
+
+  const navItems = [
+    { id:"vendors", icon:"building-2", label:"Vendors" },
+    { id:"pos", icon:"shopping-cart", label:"Purchase Orders" },
+    { id:"approvals", icon:"check-square", label:"Approvals" },
+    { id:"reports", icon:"bar-chart-2", label:"Reports" },
+  ];
+
+  const filteredVendors = VENDORS.filter(v => v.name.toLowerCase().includes(searchQ.toLowerCase()) || v.id.includes(searchQ));
+
+  const getBadge = s => <Badge type={s.toLowerCase()}>{s === "Active" ? "● Active" : s === "Pending" ? "● Pending" : "● Suspended"}</Badge>;
+  const getDnpBadge = d => <Badge type={d === "CLEAR" ? "clear" : d === "FLAGGED" ? "flagged" : "pending"}>{d === "CLEAR" ? "✓ CLEAR" : d === "FLAGGED" ? "⚠ FLAGGED" : "⋯ PENDING"}</Badge>;
+
+  const getValidKey = (vendorId, name) => `${vendorId}-${name}`;
+  const getValidStatus = (vendorId, name, fallback) => validationState[getValidKey(vendorId, name)] || fallback;
+
+  const ValidationModal = () => {
+    if (!validationModal) return null;
+    const { type, vendor, item } = validationModal;
+    const isKyc = type === "kyc";
+    const isMoodys = type === "moodys";
+    const isContract = type === "contract";
+    const isRenewal = type === "renewal";
+
+    return (
+      <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.5)", zIndex:9999, display:"flex", alignItems:"center", justifyContent:"center" }} onClick={() => setValidationModal(null)}>
+        <div style={{ background:"white", borderRadius:8, padding:24, width:520, maxHeight:"85vh", overflowY:"auto", boxShadow:"0 20px 60px rgba(0,0,0,0.3)" }} onClick={e => e.stopPropagation()}>
+          <div style={{ display:"flex", justifyContent:"space-between", marginBottom:16, alignItems:"center" }}>
+            <h3 style={{ fontSize:16, fontWeight:600 }}>
+              {isKyc && "Validate KYC Document"}
+              {isMoodys && "Moodys DNP Screening — Validate Result"}
+              {isContract && "Validate Contract"}
+              {isRenewal && "Validate Renewal Documents"}
+            </h3>
+            <span style={{ cursor:"pointer", fontSize:18, color:C.neutral60 }} onClick={() => setValidationModal(null)}>✕</span>
+          </div>
+
+          <div style={{ background:"#faf9f8", border:`1px solid ${C.border}`, borderRadius:6, padding:14, marginBottom:16 }}>
+            <div style={{ fontSize:12, color:C.neutral60, marginBottom:2 }}>VENDOR</div>
+            <div style={{ fontWeight:600 }}>{vendor.name} · {vendor.id}</div>
+          </div>
+
+          {isKyc && item && (
+            <div style={{ marginBottom:16 }}>
+              <div style={{ marginBottom:10 }}>
+                <label style={{ fontSize:11, fontWeight:600, color:C.neutral60, display:"block", marginBottom:3 }}>DOCUMENT TYPE</label>
+                <div style={{ fontWeight:500 }}>{item.name}</div>
+              </div>
+              <div style={{ marginBottom:10 }}>
+                <label style={{ fontSize:11, fontWeight:600, color:C.neutral60, display:"block", marginBottom:3 }}>CURRENT EXPIRY DATE</label>
+                <div style={{ fontFamily:"monospace" }}>{item.expiry || "Not set"}</div>
+              </div>
+              <div style={{ marginBottom:10 }}>
+                <label style={{ fontSize:11, fontWeight:600, color:C.neutral60, display:"block", marginBottom:4 }}>NEW EXPIRY DATE</label>
+                <input type="date" style={{ border:`1px solid ${C.border}`, borderRadius:4, padding:"6px 10px", fontSize:13, width:"100%" }} defaultValue="2027-04-24" />
+              </div>
+              <div>
+                <label style={{ fontSize:11, fontWeight:600, color:C.neutral60, display:"block", marginBottom:4 }}>VALIDATION NOTES</label>
+                <textarea style={{ border:`1px solid ${C.border}`, borderRadius:4, padding:"8px 10px", fontSize:13, width:"100%", height:80, resize:"vertical" }} placeholder="e.g. Document verified against original. Expiry confirmed." />
+              </div>
+            </div>
+          )}
+
+          {isMoodys && (
+            <div style={{ marginBottom:16 }}>
+              <div style={{ display:"flex", gap:10, marginBottom:14 }}>
+                <div style={{ background:"#faf9f8", border:`1px solid ${C.border}`, borderRadius:6, padding:12, flex:1 }}>
+                  <div style={{ fontSize:11, color:C.neutral60, marginBottom:4 }}>MOODYS RISK SCORE</div>
+                  <div style={{ fontSize:28, fontWeight:700, color: vendor.moodysScore >= 70 ? "#107c10" : vendor.moodysScore >= 40 ? "#835b00" : "#c50f1f" }}>{vendor.moodysScore ?? "N/A"}</div>
+                </div>
+                <div style={{ background:"#faf9f8", border:`1px solid ${C.border}`, borderRadius:6, padding:12, flex:1 }}>
+                  <div style={{ fontSize:11, color:C.neutral60, marginBottom:4 }}>RISK CLASSIFICATION</div>
+                  <div style={{ fontSize:18, fontWeight:700 }}>{vendor.moodysRisk}</div>
+                </div>
+                <div style={{ background:"#faf9f8", border:`1px solid ${C.border}`, borderRadius:6, padding:12, flex:1 }}>
+                  <div style={{ fontSize:11, color:C.neutral60, marginBottom:4 }}>SCREENING DATE</div>
+                  <div style={{ fontSize:13, fontWeight:600 }}>{vendor.moodysUpdated}</div>
+                </div>
+              </div>
+              <div style={{ marginBottom:10 }}>
+                <label style={{ fontSize:11, fontWeight:600, color:C.neutral60, display:"block", marginBottom:4 }}>COMPLIANCE OFFICER DECISION</label>
+                <div style={{ display:"flex", gap:8 }}>
+                  {["Accept & Proceed","Flag for Review","Reject Vendor"].map(opt=>(
+                    <button key={opt} style={{ flex:1, padding:"8px", borderRadius:4, border:`1px solid ${C.border}`, cursor:"pointer", fontSize:12, fontWeight:600, background: opt==="Accept & Proceed" ? "#dff6dd" : opt==="Reject Vendor" ? "#fde7e9" : "#fff4ce", color: opt==="Accept & Proceed" ? "#107c10" : opt==="Reject Vendor" ? "#c50f1f" : "#835b00" }}>{opt}</button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label style={{ fontSize:11, fontWeight:600, color:C.neutral60, display:"block", marginBottom:4 }}>COMPLIANCE NOTES</label>
+                <textarea style={{ border:`1px solid ${C.border}`, borderRadius:4, padding:"8px 10px", fontSize:13, width:"100%", height:80, resize:"vertical" }} placeholder="e.g. No adverse media. Moodys CLEAR result accepted. Proceeding with onboarding." />
+              </div>
+            </div>
+          )}
+
+          {(isContract || isRenewal) && (
+            <div style={{ marginBottom:16 }}>
+              {vendor.contracts.map((ct,i) => (
+                <div key={i} style={{ marginBottom:12, background:"#faf9f8", border:`1px solid ${C.border}`, borderRadius:6, padding:12 }}>
+                  <div style={{ display:"flex", justifyContent:"space-between", marginBottom:8 }}>
+                    <span style={{ fontFamily:"monospace", color:C.accent, fontSize:12 }}>{ct.id}</span>
+                    <Badge type={ct.status.toLowerCase()}>{ct.status}</Badge>
+                  </div>
+                  <div style={{ fontSize:12, marginBottom:4 }}>{ct.desc}</div>
+                  <div style={{ fontSize:11, color:C.neutral60 }}>Expiry: {ct.expiry} · Value: {ct.value}</div>
+                </div>
+              ))}
+              <div style={{ marginBottom:10 }}>
+                <label style={{ fontSize:11, fontWeight:600, color:C.neutral60, display:"block", marginBottom:4 }}>RENEWAL EXPIRY DATE</label>
+                <input type="date" style={{ border:`1px solid ${C.border}`, borderRadius:4, padding:"6px 10px", fontSize:13, width:"100%" }} defaultValue="2027-04-24" />
+              </div>
+              <div>
+                <label style={{ fontSize:11, fontWeight:600, color:C.neutral60, display:"block", marginBottom:4 }}>RENEWAL NOTES / APPROVAL</label>
+                <textarea style={{ border:`1px solid ${C.border}`, borderRadius:4, padding:"8px 10px", fontSize:13, width:"100%", height:80, resize:"vertical" }} placeholder="e.g. Contract renewed for 12 months. Procurement Manager approved. SAP to be updated." />
+              </div>
+            </div>
+          )}
+
+          <div style={{ display:"flex", gap:8, justifyContent:"flex-end" }}>
+            <button onClick={() => setValidationModal(null)} style={{ padding:"8px 16px", borderRadius:4, border:`1px solid ${C.border}`, cursor:"pointer", fontSize:13, background:"white" }}>Cancel</button>
+            <button onClick={() => {
+              if (validationModal?.item) {
+                const key = getValidKey(vendor.id, validationModal.item.name);
+                setValidationState(prev => ({ ...prev, [key]: "Validated" }));
+              }
+              setValidationModal(null);
+            }} style={{ padding:"8px 16px", borderRadius:4, border:"none", cursor:"pointer", fontSize:13, fontWeight:600, background:C.accent, color:"white" }}>✓ Confirm & Save</button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div style={{ display:"flex", height:"calc(100vh - 48px)" }}>
+      <ValidationModal />
+      {/* Left nav */}
+      <div style={{ width:200, background:"#1e1e2d", padding:"12px 0", display:"flex", flexDirection:"column" }}>
+        <div style={{ padding:"8px 16px 16px", borderBottom:"1px solid rgba(255,255,255,0.1)", marginBottom:8 }}>
+          <div style={{ fontSize:13, fontWeight:700, color:"white" }}>GBM Operations</div>
+          <div style={{ fontSize:10, color:"rgba(255,255,255,0.5)" }}>Model-Driven App · Internal</div>
+        </div>
+        <div style={{ fontSize:10, color:"rgba(255,255,255,0.35)", textTransform:"uppercase", padding:"12px 16px 4px", letterSpacing:"0.8px" }}>Core Modules</div>
+        {navItems.map(n => (
+          <div key={n.id} onClick={() => { setActiveNav(n.id); setSelectedVendor(null); }}
+            style={{ display:"flex", alignItems:"center", gap:10, padding:"9px 16px", color: activeNav===n.id ? "white" : "rgba(255,255,255,0.7)", cursor:"pointer", fontSize:13, background: activeNav===n.id ? "rgba(0,120,212,0.25)" : "transparent", borderLeft: activeNav===n.id ? "3px solid #0078d4" : "3px solid transparent", transition:"all 0.1s" }}>
+            <Ic name={n.icon} size={15} />{n.label}
+          </div>
+        ))}
+        <div style={{ fontSize:10, color:"rgba(255,255,255,0.35)", textTransform:"uppercase", padding:"12px 16px 4px", letterSpacing:"0.8px", marginTop:16 }}>Admin</div>
+        {[{id:"settings",icon:"settings",label:"Settings"},{id:"help",icon:"help-circle",label:"Help"}].map(n=>(
+          <div key={n.id} style={{ display:"flex", alignItems:"center", gap:10, padding:"9px 16px", color:"rgba(255,255,255,0.7)", cursor:"pointer", fontSize:13 }}><Ic name={n.icon} size={15} />{n.label}</div>
+        ))}
+        <div style={{ marginTop:"auto", padding:"12px 16px", borderTop:"1px solid rgba(255,255,255,0.1)", display:"flex", alignItems:"center", gap:8 }}>
+          <div style={{ width:28, height:28, background:C.accent, borderRadius:"50%", display:"flex", alignItems:"center", justifyContent:"center", fontSize:11, fontWeight:600, color:"white" }}>SA</div>
+          <div>
+            <div style={{ fontSize:12, color:"white", fontWeight:500 }}>Sara Al Hashimi</div>
+            <div style={{ fontSize:10, color:"rgba(255,255,255,0.5)" }}>Procurement Manager</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Content */}
+      <div style={{ flex:1, display:"flex", flexDirection:"column", overflow:"hidden" }}>
+        {/* Ribbon */}
+        <div style={{ background:"white", borderBottom:`1px solid ${C.border}`, padding:"8px 16px", display:"flex", gap:8, alignItems:"center", flexWrap:"wrap" }}>
+          {[
+            {label:"New",icon:"plus",primary:true},
+            {label:"Edit",icon:"edit-2"},
+            {label:"Save",icon:"save"},
+          ].map(b=>(
+            <button key={b.label} style={{ display:"inline-flex", flexDirection:"column", alignItems:"center", gap:2, padding:"6px 12px", borderRadius:2, fontSize:11, cursor:"pointer", border:`1px solid ${b.primary ? C.accent : C.border}`, background: b.primary ? C.accent : "white", color: b.primary ? "white" : C.neutral100, transition:"all 0.15s" }}>
+              <Ic name={b.icon} size={14} />{b.label}
+            </button>
+          ))}
+          <div style={{ width:1, background:C.border, height:36, margin:"0 4px" }} />
+          {[
+            {label:"Deactivate",icon:"x-circle"},
+            {label:"Re-Screen",icon:"shield"},
+            {label:"Validate KYC",icon:"file-check"},
+            {label:"Validate Moodys",icon:"shield-check"},
+            {label:"Validate Contract",icon:"calendar"},
+          ].map(b=>(
+            <button key={b.label} onClick={()=> {
+              if (!selectedVendor) return;
+              if (b.label==="Validate KYC") setValidationModal({type:"kyc",vendor:selectedVendor,item:selectedVendor.kycDocs[0]});
+              else if (b.label==="Validate Moodys") setValidationModal({type:"moodys",vendor:selectedVendor,item:null});
+              else if (b.label==="Validate Contract") setValidationModal({type:"contract",vendor:selectedVendor,item:null});
+            }} style={{ display:"inline-flex", flexDirection:"column", alignItems:"center", gap:2, padding:"6px 12px", borderRadius:2, fontSize:11, cursor: selectedVendor ? "pointer" : "not-allowed", border:`1px solid ${C.border}`, background:"white", color: selectedVendor ? C.neutral100 : C.neutral60, opacity: selectedVendor ? 1 : 0.5 }}>
+              <Ic name={b.icon} size={14} />{b.label}
+            </button>
+          ))}
+          <div style={{ marginLeft:"auto", display:"flex", gap:8, alignItems:"center" }}>
+            <div style={{ display:"flex", alignItems:"center", gap:6, border:`1px solid ${C.border}`, borderRadius:2, padding:"4px 10px", background:"white" }}>
+              <Ic name="search" size={13} color="#888" />
+              <input placeholder="Search vendors..." value={searchQ} onChange={e=>setSearchQ(e.target.value)} style={{ border:"none", outline:"none", fontSize:13, width:160 }} />
+            </div>
+          </div>
+        </div>
+
+        {activeNav === "vendors" ? (
+          <div style={{ display:"flex", flex:1, overflow:"hidden" }}>
+            {/* List pane */}
+            <div style={{ width:430, borderRight:`1px solid ${C.border}`, display:"flex", flexDirection:"column", overflow:"hidden", flexShrink:0 }}>
+              {/* Header row */}
+              <div style={{ display:"grid", gridTemplateColumns:"85px 1fr 100px 100px 110px", gap:8, padding:"8px 16px", background:"#f3f2f1", borderBottom:`1px solid ${C.border}`, fontSize:11, fontWeight:600, color:C.neutral60 }}>
+                <span>ID</span><span>NAME</span><span>STATUS</span><span>DNP</span><span>LAST ACTIVE</span>
+              </div>
+              <div style={{ overflowY:"auto", flex:1 }}>
+                {filteredVendors.map(v=>(
+                  <div key={v.id} onClick={()=>setSelectedVendor(v)} style={{ display:"grid", gridTemplateColumns:"85px 1fr 100px 100px 110px", gap:8, padding:"10px 16px", borderBottom:`1px solid #f3f2f1`, fontSize:13, cursor:"pointer", alignItems:"center", background: selectedVendor?.id===v.id ? "#e6f2fa" : "white", transition:"background 0.1s" }}>
+                    <span style={{ fontFamily:"monospace", fontSize:12, color:C.accent }}>{v.id}</span>
+                    <span style={{ fontWeight:500, fontSize:12 }}>{v.name}</span>
+                    {getBadge(v.status)}
+                    {getDnpBadge(v.dnp)}
+                    <span style={{ fontSize:11, color:C.neutral60 }}>{v.lastActivity}</span>
+                  </div>
+                ))}
+              </div>
+              <div style={{ padding:"8px 16px", background:"#f3f2f1", borderTop:`1px solid ${C.border}`, fontSize:11, color:C.neutral60 }}>
+                Showing {filteredVendors.length} of {VENDORS.length} records
+              </div>
+            </div>
+
+            {/* Detail pane */}
+            <div style={{ flex:1, overflowY:"auto", padding:20, background:"#faf9f8" }}>
+              {selectedVendor ? (
+                <>
+                  <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:16 }}>
+                    <div style={{ width:44, height:44, background:C.accent, borderRadius:8, display:"flex", alignItems:"center", justifyContent:"center", color:"white", fontWeight:700, fontSize:16 }}>{selectedVendor.name[0]}</div>
+                    <div>
+                      <div style={{ fontSize:16, fontWeight:600 }}>{selectedVendor.name}</div>
+                      <div style={{ fontSize:12, color:C.neutral60 }}>{selectedVendor.id} · {selectedVendor.country} · {selectedVendor.cat}</div>
+                    </div>
+                    <div style={{ marginLeft:"auto", display:"flex", gap:8 }}>{getBadge(selectedVendor.status)}{getDnpBadge(selectedVendor.dnp)}</div>
+                  </div>
+
+                  {/* Inner tabs */}
+                  <div style={{ display:"flex", borderBottom:`1px solid ${C.border}`, background:"white", padding:"0 0", marginBottom:0 }}>
+                    {["profile","kyc","moodys","contracts","history","pos"].map(t=>(
+                      <div key={t} onClick={()=>setDetailTab(t)} style={{ padding:"10px 14px", fontSize:12, cursor:"pointer", color: detailTab===t ? C.accent : C.neutral60, borderBottom: detailTab===t ? `2px solid ${C.accent}` : "2px solid transparent", fontWeight: detailTab===t ? 600 : 400, transition:"all 0.15s" }}>
+                        {t==="profile"?"Vendor Profile":t==="kyc"?"KYC Documents":t==="moodys"?"Moodys Screening":t==="contracts"?"Contracts":t==="history"?"Approval History":"Related POs"}
+                      </div>
+                    ))}
+                  </div>
+
+                  {detailTab === "profile" && (
+                    <div style={{ background:"white", border:`1px solid ${C.border}`, borderRadius:4, padding:20, marginTop:12 }}>
+                      <h4 style={{ fontSize:14, fontWeight:600, marginBottom:14, paddingBottom:10, borderBottom:`1px solid ${C.border}` }}>Company Information</h4>
+                      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12, marginBottom:12 }}>
+                        {[["Legal Name",selectedVendor.name],["Vendor ID (SAP)",selectedVendor.id],["Primary Contact",selectedVendor.contact],["Email",selectedVendor.email],["Phone",selectedVendor.phone],["Country",selectedVendor.country],["Trade Licence",selectedVendor.licence],["VAT Registration",selectedVendor.vat]].map(([label,val])=>(
+                          <div key={label}><label style={{ display:"block", fontSize:11, color:C.neutral60, fontWeight:600, marginBottom:3 }}>{label}</label><div style={{ fontSize:13, padding:"6px 0" }}>{val}</div></div>
+                        ))}
+                      </div>
+                      <h4 style={{ fontSize:14, fontWeight:600, marginBottom:12, paddingBottom:10, borderBottom:`1px solid ${C.border}`, marginTop:16 }}>Banking Details</h4>
+                      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
+                        {[["Bank Name",selectedVendor.bank],["SWIFT / BIC",selectedVendor.swift],["IBAN",selectedVendor.iban]].map(([label,val])=>(
+                          <div key={label} style={{ gridColumn: label==="IBAN" ? "1/-1" : undefined }}><label style={{ display:"block", fontSize:11, color:C.neutral60, fontWeight:600, marginBottom:3 }}>{label}</label><div style={{ fontSize:13, fontFamily: label==="IBAN" ? "monospace" : "inherit", letterSpacing: label==="IBAN" ? 1 : 0, padding:"6px 0" }}>{val}</div></div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {detailTab === "kyc" && (
+                    <div style={{ background:"white", border:`1px solid ${C.border}`, borderRadius:4, padding:20, marginTop:12 }}>
+                      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:14, paddingBottom:10, borderBottom:`1px solid ${C.border}` }}>
+                        <h4 style={{ fontSize:14, fontWeight:600 }}>KYC Document Validation</h4>
+                        <button onClick={() => setValidationModal({type:"renewal",vendor:selectedVendor,item:null})} style={{ display:"inline-flex", alignItems:"center", gap:6, padding:"6px 12px", borderRadius:4, border:`1px solid ${C.accent}`, background:"#e6f2fa", color:C.accent, cursor:"pointer", fontSize:12, fontWeight:600 }}>
+                          <Ic name="refresh-cw" size={13} /> Validate Renewals
+                        </button>
+                      </div>
+                      <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+                        {selectedVendor.kycDocs.map((doc,i) => {
+                          const validatedStatus = getValidStatus(selectedVendor.id, doc.name, null);
+                          const displayStatus = validatedStatus || doc.status;
+                          return (
+                            <div key={i} style={{ display:"flex", alignItems:"center", gap:12, padding:"12px 16px", background:"#faf9f8", border:`1px solid ${C.border}`, borderRadius:6 }}>
+                              <Ic name={displayStatus==="Valid" || displayStatus==="Validated" ? "check-circle" : displayStatus==="Expiring" ? "alert-triangle" : displayStatus==="Expired" ? "alert-circle" : "clock"} size={18} color={displayStatus==="Valid" || displayStatus==="Validated" ? "#107c10" : displayStatus==="Expiring" ? "#835b00" : displayStatus==="Expired" ? "#c50f1f" : C.neutral60} />
+                              <div style={{ flex:1 }}>
+                                <div style={{ fontWeight:600, fontSize:13 }}>{doc.name}</div>
+                                <div style={{ fontSize:11, color:C.neutral60, marginTop:2 }}>Expiry: {doc.expiry || "Not set"}</div>
+                              </div>
+                              <Badge type={displayStatus.toLowerCase()}>{displayStatus}</Badge>
+                              <button onClick={() => setValidationModal({type:"kyc",vendor:selectedVendor,item:doc})} style={{ display:"inline-flex", alignItems:"center", gap:4, padding:"5px 12px", borderRadius:4, border:`1px solid ${C.border}`, background:"white", cursor:"pointer", fontSize:11, fontWeight:600, color:C.accent }}>
+                                <Ic name="check" size={12} color={C.accent} /> Validate
+                              </button>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {detailTab === "moodys" && (
+                    <div style={{ background:"white", border:`1px solid ${C.border}`, borderRadius:4, padding:20, marginTop:12 }}>
+                      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:14, paddingBottom:10, borderBottom:`1px solid ${C.border}` }}>
+                        <h4 style={{ fontSize:14, fontWeight:600 }}>Moodys DNP Screening Result</h4>
+                        <button onClick={() => setValidationModal({type:"moodys",vendor:selectedVendor,item:null})} style={{ display:"inline-flex", alignItems:"center", gap:6, padding:"6px 12px", borderRadius:4, border:`1px solid ${C.pp}`, background:"rgba(116,39,116,0.08)", color:C.pp, cursor:"pointer", fontSize:12, fontWeight:600 }}>
+                          <Ic name="shield-check" size={13} color={C.pp} /> Validate Result
+                        </button>
+                      </div>
+                      <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:12, marginBottom:16 }}>
+                        {[
+                          {label:"DNP STATUS", value:selectedVendor.dnp, color: selectedVendor.dnp==="CLEAR"?"#107c10":selectedVendor.dnp==="FLAGGED"?"#c50f1f":"#835b00"},
+                          {label:"RISK SCORE", value: selectedVendor.moodysScore ?? "N/A", color: selectedVendor.moodysScore >= 70 ? "#107c10" : selectedVendor.moodysScore >= 40 ? "#835b00" : "#c50f1f"},
+                          {label:"RISK LEVEL", value:selectedVendor.moodysRisk, color:C.neutral100},
+                          {label:"SCREENING DATE", value:selectedVendor.moodysUpdated, color:C.neutral100, full:true},
+                        ].map((item,i) => (
+                          <div key={i} style={{ gridColumn:item.full?"1/-1":undefined, background:"#faf9f8", border:`1px solid ${C.border}`, borderRadius:6, padding:12 }}>
+                            <div style={{ fontSize:11, color:C.neutral60, fontWeight:600, marginBottom:6 }}>{item.label}</div>
+                            <div style={{ fontSize: i<2 ? 24:16, fontWeight:700, color:item.color }}>{item.value}</div>
+                          </div>
+                        ))}
+                      </div>
+                      {selectedVendor.dnp === "FLAGGED" && (
+                        <div style={{ background:"#fde7e9", border:"1px solid #f4b8b8", borderRadius:6, padding:"12px 16px", display:"flex", gap:10, alignItems:"flex-start" }}>
+                          <Ic name="alert-circle" size={16} color="#c50f1f" />
+                          <div>
+                            <div style={{ fontWeight:600, color:"#c50f1f", fontSize:13 }}>FLAGGED — Compliance Action Required</div>
+                            <div style={{ fontSize:12, color:"#c50f1f", marginTop:4 }}>This vendor has been flagged by Moodys screening. Onboarding is on hold pending compliance officer review and decision.</div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {detailTab === "contracts" && (
+                    <div style={{ background:"white", border:`1px solid ${C.border}`, borderRadius:4, padding:20, marginTop:12 }}>
+                      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:14, paddingBottom:10, borderBottom:`1px solid ${C.border}` }}>
+                        <h4 style={{ fontSize:14, fontWeight:600 }}>Contract Management</h4>
+                        <button onClick={() => setValidationModal({type:"contract",vendor:selectedVendor,item:null})} style={{ display:"inline-flex", alignItems:"center", gap:6, padding:"6px 12px", borderRadius:4, border:`1px solid ${C.gbm}`, background:"rgba(33,115,70,0.08)", color:C.gbm, cursor:"pointer", fontSize:12, fontWeight:600 }}>
+                          <Ic name="calendar" size={13} color={C.gbm} /> Validate / Renew
+                        </button>
+                      </div>
+                      {selectedVendor.contracts.length > 0 ? selectedVendor.contracts.map((ct,i) => (
+                        <div key={i} style={{ border:`1px solid ${C.border}`, borderRadius:6, padding:16, marginBottom:12 }}>
+                          <div style={{ display:"flex", justifyContent:"space-between", marginBottom:10 }}>
+                            <span style={{ fontFamily:"monospace", color:C.accent, fontSize:13, fontWeight:600 }}>{ct.id}</span>
+                            <Badge type={ct.status.toLowerCase()}>{ct.status}</Badge>
+                          </div>
+                          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:10 }}>
+                            {[["Description",ct.desc],["Expiry Date",ct.expiry],["Contract Value",ct.value]].map(([l,v])=>(
+                              <div key={l}><div style={{ fontSize:11, color:C.neutral60, fontWeight:600, marginBottom:3 }}>{l}</div><div style={{ fontSize:13 }}>{v}</div></div>
+                            ))}
+                          </div>
+                        </div>
+                      )) : (
+                        <div style={{ textAlign:"center", color:C.neutral60, padding:"24px 0", fontSize:13 }}>No contracts associated with this vendor.</div>
+                      )}
+                    </div>
+                  )}
+
+                  {detailTab === "history" && (
+                    <div style={{ background:"white", border:`1px solid ${C.border}`, borderRadius:4, padding:20, marginTop:12 }}>
+                      <h4 style={{ fontSize:14, fontWeight:600, marginBottom:14, paddingBottom:10, borderBottom:`1px solid ${C.border}` }}>Approval History</h4>
+                      <div style={{ display:"flex", flexDirection:"column", gap:0 }}>
+                        {(selectedVendor.status === "Pending" ? [
+                          { color:"#e65100", icon:"user-plus", title:"Vendor Registration Submitted", sub:"23 Apr 2026 · 09:14 GST · Self-registered via Power Pages" },
+                          { color:C.pp, icon:"shield-alert", title:"Moodys DNP Screening — In Progress", sub:"23 Apr 2026 · 09:15 GST · API call submitted, awaiting result" },
+                        ] : [
+                          { color:"#107c10", icon:"check-circle", title:"Vendor Approved & SAP Record Created", sub:`${selectedVendor.approvedDate} · Approved by ${selectedVendor.approvedBy}` },
+                          { color:C.accent, icon:"eye", title:"Internal Review Completed", sub:"Documents and DNP result reviewed — all clear" },
+                          { color:C.pp, icon:"shield-check", title:`Moodys DNP Screening — ${selectedVendor.dnp}`, sub:"Automated screening via Moodys API — result stored in Dataverse" },
+                          { color:"#e65100", icon:"user-plus", title:"Vendor Registration Submitted", sub:"Self-registered via Power Pages Vendor Portal" },
+                        ]).map((item,i,arr)=>(
+                          <div key={i} style={{ display:"flex", gap:12, paddingBottom:16, position:"relative" }}>
+                            {i < arr.length-1 && <div style={{ position:"absolute", left:15, top:32, bottom:0, width:2, background:"#e1dfdd" }} />}
+                            <div style={{ width:30, height:30, borderRadius:"50%", background:item.color+"18", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}><Ic name={item.icon} size={14} color={item.color} /></div>
+                            <div><div style={{ fontSize:13, fontWeight:600 }}>{item.title}</div><div style={{ fontSize:12, color:C.neutral60, marginTop:2 }}>{item.sub}</div></div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {detailTab === "pos" && (
+                    <div style={{ background:"white", border:`1px solid ${C.border}`, borderRadius:4, padding:20, marginTop:12 }}>
+                      <h4 style={{ fontSize:14, fontWeight:600, marginBottom:14, paddingBottom:10, borderBottom:`1px solid ${C.border}` }}>Related Purchase Orders (SAP Read-Only)</h4>
+                      <table style={{ width:"100%", borderCollapse:"collapse", fontSize:12 }}>
+                        <thead><tr>{["PO Number","Description","Amount","Status","Delivery"].map(h=><th key={h} style={{ textAlign:"left", padding:8, background:"#f3f2f1", border:`1px solid ${C.border}`, fontWeight:600, color:C.neutral60 }}>{h}</th>)}</tr></thead>
+                        <tbody>
+                          {PURCHASE_ORDERS.map((p,i)=>(
+                            <tr key={i}>
+                              <td style={{ padding:"9px 8px", border:`1px solid ${C.border}`, fontFamily:"monospace", color:C.accent, fontSize:11 }}>{p.po}</td>
+                              <td style={{ padding:"9px 8px", border:`1px solid ${C.border}` }}>{p.desc}</td>
+                              <td style={{ padding:"9px 8px", border:`1px solid ${C.border}`, fontWeight:600 }}>{p.amount}</td>
+                              <td style={{ padding:"9px 8px", border:`1px solid ${C.border}` }}><Badge type={p.status==="Closed"||p.status==="Goods Received"?"active":p.status==="Open"?"review":"pending"}>{p.status}</Badge></td>
+                              <td style={{ padding:"9px 8px", border:`1px solid ${C.border}` }}>{p.delivery}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div style={{ display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", height:"100%", color:C.neutral60 }}>
+                  <Ic name="building-2" size={48} color="#ddd" />
+                  <div style={{ fontSize:14, marginTop:16, fontWeight:500 }}>Select a vendor to view details</div>
+                  <div style={{ fontSize:12, marginTop:6 }}>Click any row in the vendor list</div>
+                </div>
+              )}
+            </div>
+          </div>
+        ) : (
+          <div style={{ flex:1, display:"flex", alignItems:"center", justifyContent:"center", flexDirection:"column", gap:12, color:C.neutral60 }}>
+            <Ic name="construction" size={40} color="#ddd" />
+            <div style={{ fontSize:14 }}>{navItems.find(n=>n.id===activeNav)?.label} — Module coming soon</div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── VENDOR PORTAL ────────────────────────────────────────────────────────────
+function VendorPortal() {
+  const [activePortalNav, setActivePortalNav] = useState("home");
+  const [invForm, setInvForm] = useState({ po:"", amount:"", invNum:"", desc:"", date:"2026-04-24", submitted:false });
+  const [poDropdownOpen, setPoDropdownOpen] = useState(false);
+
+  const openPOs = PURCHASE_ORDERS.filter(p => p.status === "Open" || p.status === "Partially Delivered");
+  const portalNavs = ["home","profile","documents","purchase-orders","invoices","support"];
+  const portalNavLabels = { home:"🏠 Home", profile:"My Profile", documents:"Submit Documents", "purchase-orders":"My Purchase Orders", invoices:"Invoices", support:"Support" };
+
+  const docs = [
+    { name:"Commercial Registration (CR)", status:"Uploaded", date:"05 Jan 2026" },
+    { name:"VAT Certificate", status:"Uploaded", date:"05 Jan 2026" },
+    { name:"Trade Licence", status:"Uploaded", date:"05 Jan 2026" },
+    { name:"Bank Letter / IBAN Confirmation", status:"Uploaded", date:"06 Jan 2026" },
+    { name:"Company Profile", status:"Required", date:"—" },
+  ];
+
+  const invSteps = ["Submitted","Under Review","Approved","Paid"];
+
+  const PoDropdown = () => (
+    <div style={{ position:"relative" }}>
+      <div onClick={() => setPoDropdownOpen(!poDropdownOpen)} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", border:`1px solid ${C.border}`, borderRadius:4, padding:"8px 12px", cursor:"pointer", background:"white", fontSize:13, color: invForm.po ? C.neutral100 : C.neutral60 }}>
+        <span>{invForm.po ? `${invForm.po} — ${openPOs.find(p=>p.po===invForm.po)?.desc}` : "Select Open PO..."}</span>
+        <Ic name="chevron-down" size={14} color={C.neutral60} />
+      </div>
+      {poDropdownOpen && (
+        <div style={{ position:"absolute", top:"100%", left:0, right:0, background:"white", border:`1px solid ${C.border}`, borderRadius:4, zIndex:999, boxShadow:"0 4px 20px rgba(0,0,0,0.15)", marginTop:2 }}>
+          {openPOs.map((p,i) => (
+            <div key={i} onClick={() => { setInvForm(f=>({...f, po:p.po, desc:p.desc, amount:p.amount.replace("AED ","")})); setPoDropdownOpen(false); }}
+              style={{ padding:"10px 14px", cursor:"pointer", borderBottom: i<openPOs.length-1 ? `1px solid ${C.border}` : "none", transition:"background 0.1s" }}
+              onMouseEnter={e=>e.currentTarget.style.background="#f0f6ff"}
+              onMouseLeave={e=>e.currentTarget.style.background="white"}
+            >
+              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                <span style={{ fontFamily:"monospace", fontSize:12, color:C.accent, fontWeight:600 }}>{p.po}</span>
+                <Badge type={p.status==="Open"?"review":"pending"}>{p.status}</Badge>
+              </div>
+              <div style={{ fontSize:12, color:C.neutral100, marginTop:3 }}>{p.desc}</div>
+              <div style={{ fontSize:11, color:C.neutral60, marginTop:1 }}>Value: {p.amount} · Delivery: {p.delivery}</div>
+            </div>
+          ))}
+          {openPOs.length === 0 && <div style={{ padding:"14px", textAlign:"center", color:C.neutral60, fontSize:13 }}>No open POs available</div>}
+        </div>
+      )}
+    </div>
+  );
+
+  return (
+    <div style={{ background:"#f0f4f8", minHeight:"calc(100vh - 48px)", display:"flex", flexDirection:"column" }}>
+      {/* Top bar */}
+      <div style={{ background:"#0a1628", color:"white", padding:"0 24px", height:56, display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+        <div style={{ display:"flex", alignItems:"center", gap:12 }}>
+          <div style={{ width:36, height:36, background:C.accent, borderRadius:6, display:"flex", alignItems:"center", justifyContent:"center" }}><Ic name="building-2" size={20} color="white" /></div>
+          <div>
+            <div style={{ fontSize:15, fontWeight:700 }}>GBM Vendor Portal</div>
+            <div style={{ fontSize:11, color:"rgba(255,255,255,0.6)" }}>Gulf Business Machines · Powered by Microsoft Power Pages</div>
+          </div>
+        </div>
+        <div style={{ display:"flex", gap:0 }}>
+          {portalNavs.map(n=>(
+            <div key={n} onClick={()=>setActivePortalNav(n)} style={{ padding:"0 14px", height:56, display:"flex", alignItems:"center", fontSize:12, color: activePortalNav===n ? "white" : "rgba(255,255,255,0.7)", cursor:"pointer", borderBottom: activePortalNav===n ? "3px solid #0078d4" : "3px solid transparent", transition:"all 0.15s" }}>
+              {portalNavLabels[n]}
+            </div>
+          ))}
+        </div>
+        <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+          <div style={{ width:30, height:30, background:C.accent, borderRadius:"50%", display:"flex", alignItems:"center", justifyContent:"center", fontSize:11, fontWeight:600, color:"white" }}>AF</div>
+          <div>
+            <div style={{ fontSize:12, color:"white", fontWeight:500 }}>Al Futtaim Trading</div>
+            <div style={{ fontSize:10, color:"rgba(255,255,255,0.55)" }}>Vendor ID: V-0041</div>
+          </div>
+        </div>
+      </div>
+
+      {/* HOME */}
+      {activePortalNav === "home" && (
+        <>
+          <div style={{ background:"linear-gradient(135deg, #0a1628 0%, #0078d4 100%)", color:"white", padding:"32px" }}>
+            <h2 style={{ fontSize:22, fontWeight:600 }}>Welcome back, Al Futtaim Trading Co.</h2>
+            <p style={{ fontSize:13, color:"rgba(255,255,255,0.8)", marginTop:6 }}>Vendor ID: V-0041 · Status: <strong>Active ✓</strong> · DNP Screening: Clear · Last login: 22 Apr 2026</p>
+            <div style={{ display:"flex", gap:20, marginTop:20 }}>
+              {[["4","Open POs"],["1","Invoice Pending"],["AED 385K","Outstanding"],["30 Days","Contract Expiry"]].map(([val,label],i)=>(
+                <div key={i} style={{ background:"rgba(255,255,255,0.12)", padding:"12px 20px", borderRadius:6, textAlign:"center", minWidth:100 }}>
+                  <div style={{ fontSize:22, fontWeight:700 }}>{val}</div>
+                  <div style={{ fontSize:11, color:"rgba(255,255,255,0.7)", marginTop:2 }}>{label}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div style={{ flex:1, padding:"24px 32px" }}>
+            <div style={{ background:"#fff4ce", border:"1px solid #f7d06a", borderRadius:6, padding:"10px 14px", fontSize:12, color:"#5f4a00", display:"flex", alignItems:"center", gap:8, marginBottom:16 }}>
+              <Ic name="bell" size={15} color="#835b00" />
+              <span><strong>Contract Reminder:</strong> Your contract GBM-CNT-0094 expires on 24 May 2026. Please contact your GBM account manager to initiate renewal.</span>
+            </div>
+            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:20 }}>
+              <div style={{ background:"white", border:"1px solid #dde4ee", borderRadius:8, padding:20 }}>
+                <h3 style={{ fontSize:14, fontWeight:600, marginBottom:14, display:"flex", alignItems:"center", gap:8 }}><Ic name="shopping-cart" size={16} color={C.accent} />Recent Purchase Orders</h3>
+                <table style={{ width:"100%", borderCollapse:"collapse", fontSize:12 }}>
+                  <thead><tr>{["PO #","Description","Amount","Status"].map(h=><th key={h} style={{ textAlign:"left", padding:8, background:"#f3f2f1", border:`1px solid ${C.border}`, fontWeight:600, color:C.neutral60 }}>{h}</th>)}</tr></thead>
+                  <tbody>
+                    {PURCHASE_ORDERS.map((p,i)=>(
+                      <tr key={i}>
+                        <td style={{ padding:"8px", border:`1px solid ${C.border}`, fontFamily:"monospace", fontSize:11, color:"#0078d4" }}>{p.po}</td>
+                        <td style={{ padding:"8px", border:`1px solid ${C.border}`, fontSize:12 }}>{p.desc}</td>
+                        <td style={{ padding:"8px", border:`1px solid ${C.border}`, fontWeight:600, fontSize:12 }}>{p.amount}</td>
+                        <td style={{ padding:"8px", border:`1px solid ${C.border}` }}><Badge type={p.status==="Closed"||p.status==="Goods Received"?"active":p.status==="Open"?"review":"pending"}>{p.status}</Badge></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <div style={{ background:"white", border:"1px solid #dde4ee", borderRadius:8, padding:20 }}>
+                <h3 style={{ fontSize:14, fontWeight:600, marginBottom:14, display:"flex", alignItems:"center", gap:8 }}><Ic name="file-text" size={16} color={C.pp} />Invoice Status Tracker</h3>
+                {INVOICES_DATA.slice(0,3).map((inv,ii)=>(
+                  <div key={ii} style={{ marginBottom:20 }}>
+                    <div style={{ display:"flex", justifyContent:"space-between", marginBottom:6 }}>
+                      <span style={{ fontFamily:"monospace", fontSize:12, color:"#0078d4" }}>{inv.inv}</span>
+                      <span style={{ fontWeight:600, fontSize:12 }}>{inv.amount}</span>
+                    </div>
+                    <div style={{ display:"flex", alignItems:"center", gap:0, marginBottom:8 }}>
+                      {invSteps.map((step,si)=>(
+                        <React.Fragment key={si}>
+                          <div style={{ display:"flex", flexDirection:"column", alignItems:"center", flex:1 }}>
+                            <div style={{ width:28, height:28, borderRadius:"50%", border:`2px solid ${C.border}`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:10, fontWeight:700, background: si<inv.currentStep ? C.success : si===inv.currentStep ? C.accent : "white", borderColor: si<inv.currentStep ? C.success : si===inv.currentStep ? C.accent : C.border, color: si<=inv.currentStep ? "white" : C.neutral100 }}>
+                              {si < inv.currentStep ? "✓" : si+1}
+                            </div>
+                            <div style={{ fontSize:10, color:C.neutral60, marginTop:4, textAlign:"center" }}>{step}</div>
+                          </div>
+                          {si < invSteps.length-1 && <div style={{ height:2, flex:1, background: si<inv.currentStep ? C.success : C.border, marginBottom:16 }} />}
+                        </React.Fragment>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* DOCUMENTS */}
+      {activePortalNav === "documents" && (
+        <div style={{ flex:1, padding:"24px 32px" }}>
+          <div style={{ background:"white", border:"1px solid #dde4ee", borderRadius:8, padding:20, maxWidth:700 }}>
+            <h3 style={{ fontSize:14, fontWeight:600, marginBottom:14, display:"flex", alignItems:"center", gap:8 }}><Ic name="upload-cloud" size={16} color={C.pp} />Submit / Update Documents</h3>
+            <p style={{ fontSize:12, color:C.neutral60, marginBottom:16 }}>Upload your compliance documents below. All submissions are reviewed by the GBM Procurement team.</p>
+            {docs.map((d,i)=>(
+              <div key={i} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"10px 12px", border:`1px solid ${C.border}`, borderRadius:6, marginBottom:8 }}>
+                <Ic name={d.status==="Uploaded"?"check-circle":"alert-circle"} size={16} color={d.status==="Uploaded"?"#107c10":"#d83b01"} />
+                <div style={{ flex:1, marginLeft:10 }}>
+                  <div style={{ fontSize:13, fontWeight:500 }}>{d.name}</div>
+                  {d.date !== "—" && <div style={{ fontSize:11, color:C.neutral60 }}>Uploaded: {d.date}</div>}
+                </div>
+                <span style={{ fontSize:11, fontWeight:600, color:d.status==="Uploaded"?"#107c10":"#d83b01", marginRight:12 }}>{d.status}</span>
+                <button style={{ fontSize:11, padding:"4px 12px", background:"#f0f4ff", color:C.accent, border:"1px solid #b3cef5", borderRadius:4, cursor:"pointer" }}>{d.status==="Uploaded"?"Replace":"Upload"}</button>
+              </div>
+            ))}
+            <button style={{ display:"inline-flex", alignItems:"center", gap:6, padding:"8px 16px", borderRadius:4, border:"none", background:C.accent, color:"white", cursor:"pointer", fontSize:13, fontWeight:500, marginTop:12 }}><Ic name="send" size={14}/>Submit for Review</button>
+          </div>
+        </div>
+      )}
+
+      {/* PURCHASE ORDERS */}
+      {activePortalNav === "purchase-orders" && (
+        <div style={{ flex:1, padding:"24px 32px" }}>
+          <div style={{ background:"white", border:"1px solid #dde4ee", borderRadius:8, padding:20 }}>
+            <h3 style={{ fontSize:14, fontWeight:600, marginBottom:8, display:"flex", alignItems:"center", gap:8 }}><Ic name="shopping-cart" size={16} color={C.accent}/>My Purchase Orders</h3>
+            <p style={{ fontSize:12, color:C.neutral60, marginBottom:14 }}>Purchase Order data is read from GBM's SAP ERP. You cannot create or modify POs via this portal.</p>
+            <table style={{ width:"100%", borderCollapse:"collapse", fontSize:12 }}>
+              <thead><tr>{["PO Number","Description","Amount (AED)","Status","Expected Delivery"].map(h=><th key={h} style={{ textAlign:"left", padding:8, background:"#f3f2f1", border:`1px solid ${C.border}`, fontWeight:600, color:C.neutral60 }}>{h}</th>)}</tr></thead>
+              <tbody>
+                {PURCHASE_ORDERS.map((p,i)=>(
+                  <tr key={i}>
+                    <td style={{ padding:"9px 8px", border:`1px solid ${C.border}`, fontFamily:"monospace", color:"#0078d4", fontWeight:600 }}>{p.po}</td>
+                    <td style={{ padding:"9px 8px", border:`1px solid ${C.border}` }}>{p.desc}</td>
+                    <td style={{ padding:"9px 8px", border:`1px solid ${C.border}`, fontWeight:600 }}>{p.amount}</td>
+                    <td style={{ padding:"9px 8px", border:`1px solid ${C.border}` }}><Badge type={p.status==="Closed"||p.status==="Goods Received"?"active":p.status==="Open"?"review":"pending"}>{p.status}</Badge></td>
+                    <td style={{ padding:"9px 8px", border:`1px solid ${C.border}` }}>{p.delivery}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* INVOICES */}
+      {activePortalNav === "invoices" && (
+        <div style={{ flex:1, padding:"24px 32px" }}>
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:20 }}>
+            <div style={{ background:"white", border:"1px solid #dde4ee", borderRadius:8, padding:20 }}>
+              <h3 style={{ fontSize:14, fontWeight:600, marginBottom:16, display:"flex", alignItems:"center", gap:8 }}><Ic name="plus-circle" size={16} color={C.gbm}/>Submit New Invoice</h3>
+              {!invForm.submitted ? (
+                <div>
+                  <div style={{ marginBottom:14 }}>
+                    <label style={{ display:"block", fontSize:11, color:C.neutral60, fontWeight:600, marginBottom:4 }}>PO REFERENCE NUMBER *</label>
+                    <PoDropdown />
+                    {invForm.po && (
+                      <div style={{ marginTop:6, padding:"8px 12px", background:"#dff6dd", borderRadius:4, fontSize:12, color:"#107c10", fontWeight:500 }}>
+                        ✓ Selected: {invForm.po} — {invForm.desc}
+                      </div>
+                    )}
+                  </div>
+                  <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
+                    {[
+                      {label:"INVOICE NUMBER *", placeholder:"e.g. INV-AF-2026-0095", key:"invNum"},
+                      {label:"INVOICE AMOUNT (AED) *", placeholder:"e.g. 385,000", key:"amount"},
+                      {label:"INVOICE DATE *", placeholder:"", key:"date", type:"date"},
+                    ].map(f=>(
+                      <div key={f.key} style={{ gridColumn: f.key==="date" ? "1/-1" : undefined }}>
+                        <label style={{ display:"block", fontSize:11, color:C.neutral60, fontWeight:600, marginBottom:3 }}>{f.label}</label>
+                        <input type={f.type||"text"} value={invForm[f.key]} onChange={e=>setInvForm(prev=>({...prev,[f.key]:e.target.value}))} placeholder={f.placeholder} style={{ width:"100%", padding:"7px 10px", border:`1px solid ${C.border}`, borderRadius:4, fontSize:13, color:C.neutral100, background:"white" }} />
+                      </div>
+                    ))}
+                  </div>
+                  <div style={{ marginTop:12, marginBottom:12 }}>
+                    <div style={{ fontSize:11, color:C.neutral60, fontWeight:600, marginBottom:8 }}>UPLOAD SUPPORTING DOCUMENTS</div>
+                    {["Invoice PDF *","Delivery Note / Goods Receipt","Timesheet (if applicable)"].map((d,i)=>(
+                      <div key={i} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"10px 12px", border:`1px solid ${C.border}`, borderRadius:6, marginBottom:8 }}>
+                        <Ic name="paperclip" size={15} color="#888" />
+                        <span style={{ flex:1, marginLeft:8, fontSize:13, fontWeight:500 }}>{d}</span>
+                        <button style={{ fontSize:11, padding:"4px 12px", background:"#f0f4ff", color:C.accent, border:"1px solid #b3cef5", borderRadius:4, cursor:"pointer" }}>Browse</button>
+                      </div>
+                    ))}
+                  </div>
+                  <button onClick={() => setInvForm(f=>({...f,submitted:true}))} disabled={!invForm.po} style={{ display:"inline-flex", alignItems:"center", gap:6, padding:"9px 18px", borderRadius:4, border:"none", background: invForm.po ? C.accent : C.neutral60, color:"white", cursor: invForm.po ? "pointer" : "not-allowed", fontSize:13, fontWeight:500 }}>
+                    <Ic name="send" size={14}/>Submit Invoice
+                  </button>
+                  {!invForm.po && <div style={{ fontSize:11, color:"#d83b01", marginTop:6 }}>Please select an open PO before submitting.</div>}
+                </div>
+              ) : (
+                <div style={{ textAlign:"center", padding:"24px 0" }}>
+                  <Ic name="check-circle" size={48} color="#107c10" />
+                  <div style={{ fontSize:16, fontWeight:600, marginTop:12, color:"#107c10" }}>Invoice Submitted Successfully</div>
+                  <div style={{ fontSize:13, color:C.neutral60, marginTop:8 }}>Your invoice has been received and is now under review by GBM Finance.</div>
+                  <button style={{ display:"inline-flex", alignItems:"center", gap:6, padding:"8px 16px", borderRadius:4, border:`1px solid ${C.border}`, background:"white", cursor:"pointer", fontSize:13, marginTop:16 }} onClick={() => setInvForm({po:"",amount:"",invNum:"",desc:"",date:"2026-04-24",submitted:false})}>Submit Another Invoice</button>
+                </div>
+              )}
+            </div>
+            <div style={{ background:"white", border:"1px solid #dde4ee", borderRadius:8, padding:20 }}>
+              <h3 style={{ fontSize:14, fontWeight:600, marginBottom:14, display:"flex", alignItems:"center", gap:8 }}><Ic name="list" size={16} color={C.accent}/>Invoice History</h3>
+              {INVOICES_DATA.map((inv,ii)=>(
+                <div key={ii} style={{ marginBottom:20, paddingBottom:20, borderBottom: ii<INVOICES_DATA.length-1 ? `1px solid ${C.border}` : "none" }}>
+                  <div style={{ display:"flex", justifyContent:"space-between", marginBottom:4 }}>
+                    <span style={{ fontFamily:"monospace", fontSize:12, color:"#0078d4", fontWeight:600 }}>{inv.inv}</span>
+                    <Badge type={inv.status==="Paid"?"active":inv.status==="Approved"?"review":"pending"}>{inv.status}</Badge>
+                  </div>
+                  <div style={{ fontSize:12, color:C.neutral60, marginBottom:8 }}>Ref: {inv.po} · {inv.submitted} · <strong>{inv.amount}</strong></div>
+                  <div style={{ display:"flex", alignItems:"center", gap:0 }}>
+                    {invSteps.map((step,si)=>(
+                      <React.Fragment key={si}>
+                        <div style={{ display:"flex", flexDirection:"column", alignItems:"center", flex:1 }}>
+                          <div style={{ width:26, height:26, borderRadius:"50%", border:`2px solid ${C.border}`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:10, fontWeight:700, background: si<inv.currentStep ? C.success : si===inv.currentStep ? C.accent : "white", borderColor: si<inv.currentStep ? C.success : si===inv.currentStep ? C.accent : C.border, color: si<=inv.currentStep ? "white" : C.neutral100 }}>
+                            {si < inv.currentStep ? "✓" : si+1}
+                          </div>
+                          <div style={{ fontSize:10, color:C.neutral60, marginTop:4, textAlign:"center" }}>{step}</div>
+                        </div>
+                        {si < invSteps.length-1 && <div style={{ height:2, flex:1, background: si<inv.currentStep ? C.success : C.border, marginBottom:16 }} />}
+                      </React.Fragment>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* PROFILE */}
+      {activePortalNav === "profile" && (
+        <div style={{ flex:1, padding:"24px 32px" }}>
+          <div style={{ background:"white", border:"1px solid #dde4ee", borderRadius:8, padding:20, maxWidth:700 }}>
+            <h3 style={{ fontSize:14, fontWeight:600, marginBottom:12, display:"flex", alignItems:"center", gap:8 }}><Ic name="user" size={16} color={C.accent}/>My Vendor Profile</h3>
+            <p style={{ fontSize:12, color:C.neutral60, marginBottom:16 }}>Your profile is maintained by GBM. To update sensitive fields, contact your GBM account manager.</p>
+            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
+              {[["Legal Name","Al Futtaim Trading Co.",true],["Vendor ID (SAP)","V-0041",true],["Primary Contact","Khalid Al Rashid",true],["Email","k.rashid@alfuttaim.ae",true],["Phone","+971 4 224 5500",false],["Country","United Arab Emirates",true],["Trade Licence","CN-1092387",true],["VAT Registration","100234567800003",true],["Bank Name","Emirates NBD",true],["IBAN","AE07033 1234 5678 9012 3456",true]].map(([label,val,ro])=>(
+                <div key={label}><label style={{ display:"block", fontSize:11, color:C.neutral60, fontWeight:600, marginBottom:3 }}>{label}</label><input value={val} readOnly={ro} style={{ width:"100%", padding:"7px 10px", border:`1px solid ${C.border}`, borderRadius:4, fontSize:13, background: ro ? "#faf9f8" : "white", color:C.neutral100 }} /></div>
+              ))}
+            </div>
+            <button style={{ display:"inline-flex", alignItems:"center", gap:6, padding:"8px 16px", borderRadius:4, border:"none", background:C.accent, color:"white", cursor:"pointer", fontSize:13, fontWeight:500, marginTop:16 }}><Ic name="save" size={14}/>Save Changes</button>
+          </div>
+        </div>
+      )}
+
+      {/* SUPPORT */}
+      {activePortalNav === "support" && (
+        <div style={{ flex:1, padding:"24px 32px" }}>
+          <div style={{ background:"white", border:"1px solid #dde4ee", borderRadius:8, padding:20, maxWidth:600 }}>
+            <h3 style={{ fontSize:14, fontWeight:600, marginBottom:16, display:"flex", alignItems:"center", gap:8 }}><Ic name="help-circle" size={16} color={C.pp}/>Vendor Support</h3>
+            <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
+              {[{icon:"mail",title:"Email Support",desc:"vendorsupport@gbm.net",color:C.accent},{icon:"phone",title:"Helpline (UAE)",desc:"+971 4 881 9999 · Sun–Thu 08:00–18:00 GST",color:C.gbm},{icon:"file-question",title:"FAQs & Documentation",desc:"Download the Vendor Portal User Guide",color:C.pp}].map((s,i)=>(
+                <div key={i} style={{ display:"flex", gap:14, padding:14, border:`1px solid ${C.border}`, borderRadius:6, alignItems:"center", cursor:"pointer", background:"#fafafa" }}>
+                  <div style={{ width:40, height:40, borderRadius:8, background:s.color+"15", display:"flex", alignItems:"center", justifyContent:"center" }}><Ic name={s.icon} size={20} color={s.color} /></div>
+                  <div><div style={{ fontWeight:600, fontSize:13 }}>{s.title}</div><div style={{ fontSize:12, color:C.neutral60, marginTop:2 }}>{s.desc}</div></div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div style={{ background:"#0a1628", color:"rgba(255,255,255,0.5)", fontSize:11, padding:"12px 32px", textAlign:"center" }}>
+        Gulf Business Machines (GBM) · Vendor Portal v2.0 · Powered by Microsoft Power Pages · All data sourced from GBM SAP ERP (Read-Only) · © 2026 GBM
+      </div>
+    </div>
+  );
+}
+
+// ─── APP SHELL ────────────────────────────────────────────────────────────────
+const TABS = [
+  { id:"workflow", label:"Workflow Diagram", icon:"git-branch" },
+  { id:"dashboard", label:"Procurement Dashboard", icon:"bar-chart-2" },
+  { id:"internal", label:"GBM Internal App", icon:"layout" },
+  { id:"portal", label:"Vendor Portal", icon:"globe" },
+];
+
+function App() {
+  const [activeTab, setActiveTab] = useState("workflow");
+
+  return (
+    <div style={{ fontFamily:"'Segoe UI', system-ui, -apple-system, sans-serif", background:"#f3f2f1", color:"#323130", fontSize:14 }}>
+      {/* Top nav */}
+      <div style={{ background:"#1e1e2d", color:"white", display:"flex", alignItems:"center", height:48, padding:"0 16px", position:"sticky", top:0, zIndex:1000, gap:0 }}>
+        <div style={{ display:"flex", alignItems:"center", gap:10, fontSize:15, fontWeight:600, color:"white", paddingRight:24, borderRight:"1px solid rgba(255,255,255,0.15)", marginRight:16, whiteSpace:"nowrap" }}>
+          <div style={{ width:28, height:28, background:C.accent, borderRadius:6, display:"flex", alignItems:"center", justifyContent:"center" }}><Ic name="building-2" size={16} color="white" /></div>
+          GBM Vendor Portal
+        </div>
+        {TABS.map(t=>(
+          <div key={t.id} onClick={()=>setActiveTab(t.id)} style={{ padding:"0 16px", height:48, display:"flex", alignItems:"center", gap:8, color: activeTab===t.id ? "white" : "rgba(255,255,255,0.75)", cursor:"pointer", fontSize:13, fontWeight:500, borderBottom: activeTab===t.id ? "3px solid #0078d4" : "3px solid transparent", transition:"all 0.15s", whiteSpace:"nowrap" }}>
+            <Ic name={t.icon} size={14} />{t.label}
+          </div>
+        ))}
+        <div style={{ marginLeft:"auto", display:"flex", alignItems:"center", gap:12 }}>
+          <span style={{ background:"rgba(255,255,255,0.12)", padding:"3px 10px", borderRadius:20, fontSize:11, color:"rgba(255,255,255,0.85)" }}>SOP v1.1 · 24 Apr 2026</span>
+          <div style={{ width:30, height:30, background:C.accent, borderRadius:"50%", display:"flex", alignItems:"center", justifyContent:"center", fontSize:12, fontWeight:600, color:"white" }}>SA</div>
+        </div>
+      </div>
+
+      {/* Page content */}
+      <div style={{ minHeight:"calc(100vh - 48px)" }}>
+        {activeTab === "workflow" && <WorkflowDiagram />}
+        {activeTab === "dashboard" && <Dashboard />}
+        {activeTab === "internal" && <ModelDrivenApp />}
+        {activeTab === "portal" && <VendorPortal />}
+      </div>
+    </div>
+  );
+}
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  </script>
+</body>
+</html>
